@@ -1,0 +1,3001 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA-CAT v0.7 · Plataforma de inspección</title>
+<style>
+  :root{
+    --navy:#0f2a44; --navy2:#173a5e; --blue:#1d6fb8; --teal:#14a095; --teal2:#0f7f76;
+    --amber:#d9961a; --red:#c94a44; --green:#1f9d6b;
+    --ink:#14212e; --muted:#5f7185; --line:#dbe5ec; --bg:#f3f6f9; --card:#ffffff;
+    --shadow:0 1px 2px rgba(16,32,50,.06),0 4px 14px rgba(16,32,50,.06);
+    --r:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.2px} h2{font-size:17px;margin:0 0 8px} h3{font-size:14px;margin:18px 0 8px;color:var(--navy);font-weight:700}
+  .muted{color:var(--muted);font-size:12.5px;line-height:1.5}
+  i.n{color:#93a2b1;font-style:normal}
+
+  /* ---------- LOGIN ---------- */
+  #login{min-height:100%;display:none;align-items:center;justify-content:center;padding:24px;background:radial-gradient(1200px 600px at 10% -10%,#1c4d78 0%,transparent 60%),linear-gradient(160deg,var(--navy),#0b1d31)}
+  .login-card{background:#fff;border-radius:18px;box-shadow:0 30px 60px rgba(0,0,0,.35);padding:30px;width:min(640px,100%)}
+  .marca{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px;color:var(--navy)}
+  .marca .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;color:#fff;font-size:15px}
+  .users{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+  .user{border:1px solid var(--line);background:#fff;border-radius:11px;padding:12px;text-align:left;cursor:pointer;font:inherit;transition:.15s}
+  .user:hover{border-color:#9fc3dd}
+  .user.on{border-color:var(--teal);box-shadow:0 0 0 3px rgba(20,160,149,.15)}
+  .user b{display:block;color:var(--ink)} .user span{font-size:12px;color:var(--muted)}
+  .user.pub{grid-column:span 2}
+
+  /* ---------- SHELL ---------- */
+  #app{display:none;min-height:100%;grid-template-columns:232px 1fr}
+  .side{background:linear-gradient(180deg,var(--navy),#0b2036);color:#c9d8e6;padding:18px 12px;display:flex;flex-direction:column;gap:14px;position:sticky;top:0;height:100vh;overflow:auto}
+  .side .marca{color:#fff;padding:0 8px}
+  .side .marca .logo{background:linear-gradient(135deg,var(--teal),#4aa6e8)}
+  .nav{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+  .nav button{background:transparent;border:0;color:#b5c7d8;text-align:left;padding:9px 10px;border-radius:9px;cursor:pointer;font:inherit;display:flex;gap:10px;align-items:center}
+  .nav button .ic{width:18px;text-align:center;color:#7fb8e6}
+  .nav button:hover{background:rgba(255,255,255,.06);color:#fff}
+  .nav button.on{background:rgba(20,160,149,.18);color:#fff;box-shadow:inset 3px 0 0 var(--teal)}
+  .nav .sep{font-size:10px;letter-spacing:1px;color:#6f8aa3;padding:10px 10px 2px;text-transform:uppercase}
+  .perfil{margin-top:auto;background:rgba(255,255,255,.06);border-radius:11px;padding:10px;font-size:12px}
+  .perfil b{color:#fff;display:block}
+  .contenido{display:flex;flex-direction:column;min-width:0}
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:14px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+  .top .titulo{font-size:16px;font-weight:700;color:var(--navy)}
+  .top .acc{display:flex;gap:8px;align-items:center}
+  .btn-ico{position:relative;border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:38px;cursor:pointer;font-size:16px;color:var(--navy)}
+  .badge-n{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700;display:none}
+  .aviso{background:#fff7e0;color:#7a5200;font-size:12px;padding:8px 22px;border-bottom:1px solid #f1dfa6}
+  main{padding:18px 22px 40px;min-width:0}
+  .tri{display:grid;grid-template-columns:300px minmax(0,1fr) 380px;gap:14px;align-items:start}
+  .card-col{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;min-width:0}
+  .card-col.mapa{padding:0;overflow:hidden;position:relative;height:calc(100vh - 150px)}
+  #colFicha{max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:78px}
+  #colLista{max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:78px}
+  .col-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .wide{width:100%}
+
+  /* ---------- CONTROLES ---------- */
+  input[type=text],input[type=date],input[type=number],input[type=password],select,textarea{width:100%;padding:9px 10px;border:1px solid #cfdbe5;border-radius:9px;font:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid #9fd6d1;border-color:var(--teal)}
+  textarea{min-height:64px;resize:vertical}
+  label.campo{display:block;font-size:12px;color:var(--muted);margin:10px 0;font-weight:600}
+  label.campo input,label.campo select,label.campo textarea{margin-top:5px;font-weight:400}
+  .btn{background:linear-gradient(180deg,var(--blue),#17609f);color:#fff;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;font:inherit;font-weight:600;margin:6px 6px 0 0;box-shadow:0 2px 6px rgba(29,111,184,.25)}
+  .btn:hover{filter:brightness(1.05)}
+  .btn.sec{background:#fff;color:#20516f;border:1px solid #b8cbd9;box-shadow:none}
+  .btn.ok{background:linear-gradient(180deg,#1fb08f,var(--teal2));box-shadow:0 2px 6px rgba(20,160,149,.25)}
+  .btn.no{background:linear-gradient(180deg,#d9605a,#b03f3a);box-shadow:none}
+  .btn.mini{padding:5px 9px;font-size:12px}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+  .chip{border:1px solid #cfdbe5;background:#fff;border-radius:16px;padding:4px 11px;font-size:12px;cursor:pointer;color:#33465a}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chip.wa{border-color:#e8c57a;background:#fff8e6;color:#7a5200}
+  .item{padding:10px;border-radius:10px;cursor:pointer;margin-bottom:5px;border:1px solid transparent}
+  .item:hover{background:#f5f9fb} .item.active{background:#eaf7f5;border-color:#b5e0da}
+  .lab{font-size:10.5px;letter-spacing:.8px;color:#7d8fa0;font-weight:700;margin:16px 0 7px;text-transform:uppercase}
+  .capa{display:flex;gap:8px;align-items:center;font-size:12.5px;margin:6px 0}
+  .leyenda{display:flex;gap:10px;font-size:11.5px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.2px}
+  .ALTA{background:#fde8e6;color:#a1342e} .MEDIA{background:#fff1d6;color:#8a5a00} .BAJA{background:#dff5ec;color:#16714f}
+  .float-r{float:right}
+  .badge{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle;white-space:nowrap;letter-spacing:.2px}
+  .FUENTE{background:#e2eefb;color:#1b5a8a} .CALCULADO{background:#dff5ec;color:#16714f}
+  .IA{background:#efe8fb;color:#5f3ea0} .VALIDADO{background:#fff0cf;color:#8a5a00} .SIN{background:#eef1f3;color:#5c6b75}
+
+  /* ---------- FICHA ---------- */
+  .prio{padding:12px 14px;border-radius:11px;font-size:14px;margin:8px 0;display:flex;justify-content:space-between;align-items:center}
+  .prio.ALTA{background:#fde8e6} .prio.MEDIA{background:#fff1d6} .prio.BAJA{background:#dff5ec}
+  .motivo,.brecha,.valid{padding:9px 11px;margin:6px 0;font-size:12.5px;line-height:1.45;border-radius:0 9px 9px 0}
+  .motivo{background:#fff8ea;border-left:3px solid var(--amber)}
+  .brecha{background:#fbf2f2;border-left:3px solid #b84b45}
+  .valid{background:#eaf7f5;border-left:3px solid var(--teal)}
+  .row{display:grid;gap:3px;padding:8px 0;border-bottom:1px solid #eef3f6;font-size:12.5px}
+  .row .k{color:var(--muted);font-size:11.5px}
+
+  /* ---------- MAPA ---------- */
+  .mapa svg{width:100%;height:100%;display:block;background:linear-gradient(180deg,#eaf4f6,#dcebef);cursor:grab;user-select:none}
+  .mapa svg:active{cursor:grabbing}
+  /* Leaflet dibuja sus polígonos en un <svg> interno: la regla general de arriba lo tapaba con
+     un fondo degradado y lo estiraba. Se anula solo para los mapas Leaflet. */
+  .leaflet-container svg{background:none !important;width:auto !important;height:auto !important;max-width:none !important;cursor:inherit !important}
+  .ctrl{position:absolute;right:14px;top:14px;display:grid;gap:6px;z-index:2}
+  .ctrl button{width:36px;height:36px;border:1px solid var(--line);background:#fff;border-radius:9px;font-size:17px;color:#3f5a70;cursor:pointer;box-shadow:var(--shadow)}
+  .mapa-leg{position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11.5px;box-shadow:var(--shadow)}
+  #tip{position:fixed;display:none;background:#0f2a44;color:#fff;padding:8px 11px;border-radius:8px;font-size:12px;pointer-events:none;z-index:50;max-width:280px;line-height:1.45;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+
+  /* ---------- KPIs / PANEL ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--teal))}
+  .kpi b{display:block;font-size:24px;color:var(--navy);letter-spacing:-.3px}
+  .kpi span{font-size:12px;color:var(--muted)}
+  .barra{height:9px;background:#eef3f6;border-radius:8px;overflow:hidden;margin:5px 0 12px}
+  .barra i{display:block;height:100%;border-radius:8px}
+  .bars{display:flex;align-items:flex-end;gap:8px;height:150px;padding:10px 4px 0;border-bottom:1px solid var(--line)}
+  .bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--muted)}
+  .bars div i{display:block;width:100%;max-width:34px;background:linear-gradient(180deg,var(--teal),var(--blue));border-radius:6px 6px 0 0;min-height:2px}
+  .bars div b{color:var(--navy);font-size:11px;margin-bottom:3px}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;margin:6px 0}
+  th,td{text-align:left;padding:8px 9px;border-bottom:1px solid #eef3f6;vertical-align:top}
+  th{background:#f5f8fa;color:var(--muted);font-size:11.5px;font-weight:700;position:sticky;top:0}
+  th:first-child{border-radius:8px 0 0 0} th:last-child{border-radius:0 8px 0 0}
+  tr:hover td{background:#fbfdfe}
+
+  /* ---------- TAREAS / TARJETAS ---------- */
+  .card{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px;background:#fff;box-shadow:var(--shadow)}
+  .card.pend{border-left:4px solid var(--amber)} .card.apr{border-left:4px solid var(--teal)} .card.rec{border-left:4px solid var(--red)}
+  .card.alta{border-left:4px solid var(--red)} .card.media{border-left:4px solid var(--amber)} .card.baja{border-left:4px solid var(--green)}
+  .cab-card{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .notif{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:#fff;margin-bottom:8px;box-shadow:var(--shadow)}
+  .notif.nueva{border-color:#9ed8cf;background:#f6fcfb}
+  .notif .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:15px;flex:none;background:#eef4f8;color:var(--navy)}
+  .notif .ico.inspeccion{background:#e2eefb} .notif .ico.ubicacion{background:#fde8e6} .notif .ico.decision{background:#dff5ec}
+  .notif .ico.asignacion{background:#efe8fb} .notif .ico.venc{background:#fff1d6} .notif .ico.sinvisita{background:#fde8e6} .notif .ico.pend{background:#fff1d6}
+  .notif .cuerpo{flex:1;min-width:0}
+  .notif .cuerpo b{font-size:13.5px}
+  .notif .meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .msg{background:#f7fafc;border:1px solid var(--line);border-radius:var(--r);padding:14px;white-space:pre-wrap;line-height:1.55;font-size:13px}
+
+  /* ---------- FOTOS ---------- */
+  .checklist{display:grid;gap:10px;margin:10px 0}
+  .cat{border:1px solid var(--line);border-radius:var(--r);padding:12px;background:#fff}
+  .cat-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .cat-head b{font-size:13.5px}
+  .req{font-size:10px;background:#fde8e6;color:#a1342e;border-radius:6px;padding:2px 6px;font-weight:700;margin-left:6px}
+  .opt{font-size:10px;background:#eef1f3;color:#5c6b75;border-radius:6px;padding:2px 6px;font-weight:700;margin-left:6px}
+  .ok-tag{font-size:10px;background:#dff5ec;color:#16714f;border-radius:6px;padding:2px 6px;font-weight:700}
+  .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
+  .foto{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#f5f8fa}
+  .foto img{width:100%;height:96px;object-fit:cover;display:block}
+  .foto .pie{font-size:10.5px;padding:4px 6px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .foto .q{position:absolute;top:5px;left:5px;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.92)}
+  .foto .q.warn{background:#fff1d6;color:#8a5a00} .foto .q.bien{background:#dff5ec;color:#16714f}
+  .foto .x{position:absolute;top:5px;right:5px;background:rgba(15,42,68,.8);color:#fff;border:0;border-radius:6px;width:22px;height:22px;cursor:pointer}
+  .val{border-radius:var(--r);padding:12px 14px;margin:12px 0;font-size:12.5px;line-height:1.5}
+  .val.bloq{background:#fde8e6;border:1px solid #f2b8b3}
+  .val.avis{background:#fff8ea;border:1px solid #f1d59a}
+  .val.bien{background:#eaf7f5;border:1px solid #b5e0da}
+  .verif{border:1px solid var(--line);border-radius:var(--r);padding:12px;margin:10px 0;background:#fbfdfe}
+  .verif b{font-size:13px}
+  .radios{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .radios label{display:inline-flex;align-items:center;gap:5px;border:1px solid #cfdbe5;border-radius:16px;padding:5px 11px;font-size:12px;cursor:pointer;background:#fff}
+  .gps{font-size:12px;color:var(--muted);margin:6px 0}
+
+  /* ---------- MENSAJES ---------- */
+  .grid2{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:14px;align-items:start}
+  .nota{font-size:11.5px;color:var(--muted);background:#f5f8fa;border-radius:9px;padding:8px 10px;margin-top:8px}
+
+  /* ---------- AUX ---------- */
+  .resumen{background:#f5f9fb;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;margin:10px 0}
+  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:44px;font-size:12px}
+  .firmas div{border-top:1px solid #555;padding-top:5px;text-align:center}
+  .pagina{border-bottom:1px dashed #cbd5dc;padding-bottom:18px;margin-bottom:20px}
+  .cab-inf{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);border-bottom:2px solid var(--navy);padding-bottom:6px;margin-bottom:12px}
+  .aviso-doc{background:#fff7e0;color:#7a5200;font-size:11px;padding:6px 9px;border-radius:7px;margin:8px 0}
+  .fotos-inf{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+  .fotos-inf img{width:100%;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+  .fotos-inf span{font-size:10px;color:var(--muted)}
+  .acc-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .empty{text-align:center;color:var(--muted);padding:34px 12px}
+  .empty b{display:block;color:var(--navy);font-size:15px;margin-bottom:4px}
+  #toast{position:fixed;right:18px;bottom:18px;background:#0f2a44;color:#fff;padding:12px 16px;border-radius:10px;font-size:12.5px;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;max-width:420px;z-index:60;box-shadow:0 12px 30px rgba(0,0,0,.3)}
+  #toast.on{opacity:1;transform:none}
+
+  /* ---------- LISTA DE VERIFICACIÓN Y FICHA DE VISITA ---------- */
+  .chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}
+  .chk{font-size:12.5px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;display:flex;gap:8px;align-items:flex-start;cursor:pointer;line-height:1.35}
+  .chk input{margin-top:2px}
+  .chk:has(input:checked){border-color:#9ed8cf;background:#f3fbfa}
+  #impVisita{display:none}
+
+  /* ---------- FUENTES, CARGA Y AGREGAR (v0.6) ---------- */
+  .btnfile{display:flex;flex-direction:column;gap:6px;background:#fff;border:1px dashed #9fc3dd;border-radius:9px;text-align:left;padding:12px;margin:8px 0;cursor:pointer;font-weight:600;color:var(--navy);font-size:13px;line-height:1.3}
+  .btnfile:hover{border-color:var(--teal);background:#f6fcfb}
+  .btnfile input[type=file]{width:100%;margin:0;font-size:12px;font-weight:400;color:var(--muted)}
+  .resumen b{color:var(--navy)}
+
+  /* ---------- MI ESPACIO DE EVIDENCIA ---------- */
+  .cmp-ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+  .cmp{position:relative;aspect-ratio:4/3;overflow:hidden;border-radius:12px;background:#0f2a44;margin-top:12px;box-shadow:var(--shadow)}
+  .cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;user-select:none;-webkit-user-drag:none}
+  .cmp-line{position:absolute;top:0;bottom:0;width:3px;background:#fff;box-shadow:0 0 8px rgba(0,0,0,.45);transform:translateX(-1px);pointer-events:none}
+  .cmp-etq{position:absolute;top:10px;font-size:11.5px;font-weight:700;color:#fff;background:rgba(15,42,68,.75);padding:4px 9px;border-radius:7px}
+  .cmp-etq.izq{left:10px} .cmp-etq.der{right:10px}
+  .galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:10px}
+  .gfoto{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s}
+  .gfoto:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(16,32,50,.12)}
+  .gfoto.sel{border-color:var(--teal);box-shadow:0 0 0 2px rgba(20,160,149,.25)}
+  .gfoto img{width:100%;height:150px;object-fit:cover;display:block}
+  .gfoto .sinimg{height:150px;display:grid;place-items:center;background:#f2f5f8;color:var(--muted);font-size:12px;text-align:center;padding:10px}
+  .gfoto .gpie{font-size:11.5px;color:var(--muted);padding:8px 10px 2px}
+  .gfoto .acc-row{padding:0 10px}
+  .gfoto .pie-in{font-size:12px;padding:6px 8px}
+  .gfoto .btn{margin:8px 10px 10px}
+  .tagx{display:inline-block;background:#eaf7f5;color:#0f6f67;border-radius:8px;padding:4px 9px;margin:3px 4px 0 0;font-size:12px}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:1180px){
+    .tri{grid-template-columns:260px minmax(0,1fr)}
+    #colFicha{grid-column:1 / -1;position:static;max-height:none}
+  }
+  @media (max-width:880px){
+    #app{grid-template-columns:1fr}
+    .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px}
+    .nav{flex-direction:row;flex-wrap:wrap;margin:0}
+    .nav .sep{display:none}
+    .perfil{display:none}
+    .tri{grid-template-columns:1fr}
+    #colLista,#colFicha{position:static;max-height:none}
+    .card-col.mapa{height:60vh}
+    .grid2{grid-template-columns:1fr}
+    .users{grid-template-columns:1fr}
+    .user.pub{grid-column:auto}
+  }
+  @media print{
+    @page{margin:14mm}
+    body{background:#fff}
+    body *{visibility:hidden}
+    #informe,#informe *,#impVisita,#impVisita *{visibility:visible}
+    #informe{position:absolute;left:0;top:0;width:100%}
+    #impVisita{display:block!important;position:absolute;left:0;top:0;width:100%}
+    .pagina{page-break-after:always;border:0}
+    .no-print{display:none!important}
+  }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+  /* Mapa base (Leaflet): contenido en su propio contexto de apilamiento */
+  .card-col.mapa{isolation:isolate}
+  #lmap{width:100%;height:100%;background:#dcebef}
+  .mapa .lctrl{position:absolute;right:14px;top:14px;z-index:900}
+  .mapa .lctrl button{height:36px;border:1px solid var(--line);background:#fff;border-radius:9px;padding:0 12px;font:inherit;font-weight:600;color:#3f5a70;cursor:pointer;box-shadow:var(--shadow)}
+  .mapa .mapa-leg{z-index:900}
+  .leaflet-tooltip.iacat{background:#0f2a44;color:#fff;border:0;border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+  .leaflet-tooltip.iacat:before{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login"></div>
+
+<!-- APLICACIÓN -->
+<div id="app">
+  <aside class="side">
+    <div class="marca"><span class="logo">◈</span><span>IA-CAT</span></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="perfil" id="perfil"></div>
+  </aside>
+  <div class="contenido">
+    <header class="top">
+      <div>
+        <div class="titulo" id="titulo"></div>
+        <div class="muted" id="subtitulo"></div>
+      </div>
+      <div class="acc">
+        <button class="btn-ico" id="campana" title="Notificaciones">◔<span class="badge-n" id="n-noti"></span></button>
+        <button class="btn sec" id="salir">Salir</button>
+      </div>
+    </header>
+    <div class="aviso" id="aviso"></div>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="impVisita"></div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/shpjs@4.0.4/dist/shp.min.js"></script>
+<script>
+// =====================================================================
+//  CONSTANTES Y ESTADO
+// =====================================================================
+const VERSION = '0.7';
+const CLAVE = 'iacat-datos', CLAVE_SESION = 'iacat-sesion';
+const CLAVE_ANTIGUA = 'iacat-v04', CLAVE_SESION_ANTIGUA = 'iacat-v04-sesion'; // migración desde versiones previas
+const $ = id => document.getElementById(id);
+const CAMPOS = ['uso','direccion','pisos','material','tipo_construccion','estado_conservacion','anio_construccion','estructura'];
+const ETIQ = {uso:'Uso de edificación', direccion:'Dirección', pisos:'Número de pisos', material:'Material predominante',
+              tipo_construccion:'Tipo de construcción', estado_conservacion:'Estado de conservación',
+              anio_construccion:'Año de construcción', estructura:'Sistema estructural',
+              area_fuente:'Área registrada', nombre:'Nombre'};
+const CATEGORIAS = [
+  {id:'fachada', t:'Fachada', req:true},
+  {id:'acceso', t:'Acceso o ingreso', req:true},
+  {id:'entorno', t:'Entorno o calle', req:true},
+  {id:'interior', t:'Interior (si aplica)', req:false}
+];
+const USUARIOS = [
+  {id:'ana',    nombre:'Ana Torres',   rol:'inspector',  cargo:'Inspectora de edificaciones'},
+  {id:'luis',   nombre:'Luis Mora',    rol:'inspector',  cargo:'Inspector de edificaciones'},
+  {id:'maria',  nombre:'María Vélez',  rol:'supervisor', cargo:'Supervisora de catastro'},
+  {id:'carlos', nombre:'Carlos Ponce', rol:'analista',   cargo:'Analista territorial'},
+  {id:'publico',nombre:'Consulta ciudadana', rol:'ciudadano', cargo:'Acceso público limitado'}
+];
+const PASSWORD_PRUEBA = 'demo123';
+const NAV = [
+  {id:'tareas',         t:'Mis tareas',            i:'▣', g:'Trabajo'},
+  {id:'bandeja',        t:'Mapa de predios',       i:'◎', g:'Trabajo'},
+  {id:'mapa-bd',        t:'Mapa en vivo (base de datos)', i:'◉', g:'Trabajo'},
+  {id:'mi-espacio',      t:'Mi espacio de evidencia', i:'◫', g:'Trabajo'},
+  {id:'inspeccion',     t:'Inspección de campo',   i:'✎', g:'Trabajo'},
+  {id:'asignaciones',   t:'Asignaciones',          i:'⇄', g:'Gestión'},
+  {id:'actualizaciones',t:'Actualizaciones',       i:'✓', g:'Gestión'},
+  {id:'notificaciones', t:'Notificaciones',        i:'◔', g:'Comunicación'},
+  {id:'mensajes',       t:'Asistente de mensajes', i:'✉', g:'Comunicación'},
+  {id:'panel',          t:'Panel y análisis',      i:'▥', g:'Análisis'},
+  {id:'alertas',        t:'Alertas y reglas',      i:'⚑', g:'Análisis'},
+  {id:'informe',        t:'Informes PDF',          i:'❏', g:'Análisis'},
+  {id:'agregar',        t:'Agregar predio o zona', i:'+', g:'Sistema'},
+  {id:'auditoria',      t:'Auditoría',             i:'☰', g:'Sistema'},
+  {id:'datos',          t:'Datos e importación',   i:'⛁', g:'Sistema'},
+  {id:'consulta',       t:'Consulta ciudadana',    i:'⌕', g:'Público'}
+];
+const PERMISOS = {
+  inspector:['tareas','mi-espacio','bandeja','mapa-bd','inspeccion','notificaciones','mensajes'],
+  supervisor:['bandeja','mapa-bd','panel','inspeccion','actualizaciones','asignaciones','notificaciones','mensajes','alertas','informe','auditoria','datos','agregar'],
+  analista:['bandeja','mapa-bd','panel','notificaciones','informe','auditoria','mensajes','datos'],
+  ciudadano:['consulta']
+};
+const ACCIONES = {
+  aprobar:['supervisor'], asignar:['supervisor'], importar:['supervisor'], inspeccionar:['inspector','supervisor'],
+  reglas:['supervisor'], fuentePDF:['supervisor','analista'], exportar:['inspector','supervisor','analista'], borrarPDF:['supervisor']
+};
+const VISTA_INICIAL = {inspector:'tareas', supervisor:'panel', analista:'panel', ciudadano:'consulta'};
+// Listas de verificación según el uso registrado en el catastro
+const CHECKLIST = {
+  RESIDENCIAL:['Número de unidades o familias visible','Estado de la estructura (grietas, humedad)','Instalaciones eléctricas visibles','Ampliaciones o construcciones sin registro','Acceso y servicios básicos'],
+  COMERCIAL:['Actividad comercial observada','Rótulo o letrero visible','Área ocupada aproximada del local','Estado de la estructura y fachada','Accesibilidad para personas con discapacidad'],
+  MIXTO:['Uso residencial en planta alta','Uso comercial en planta baja','Ampliaciones o cambios de uso','Estado de la estructura','Accesos independientes'],
+  INDUSTRIAL:['Tipo de actividad productiva','Maquinaria o almacenamiento visible','Estado de la estructura y cubierta','Señalización de seguridad','Accesos vehiculares'],
+  EQUIPAMIENTO:['Tipo de servicio público o institucional','Estado de la estructura','Accesos y señalización','Capacidad o aforo aproximado'],
+  OTRO:['Coincide con el uso registrado','Estado general de la edificación','Ampliaciones visibles','Accesos y servicios']
+};
+// Observaciones frecuentes para escribir más rápido y con un lenguaje uniforme
+const OBS_FRECUENTES = ['Fachada en buen estado.','Se observan grietas en muros.','Presencia de humedad en paredes.','Ampliación sin registro visible.','Uso distinto al registrado.','Local en funcionamiento.','Predio desocupado al momento de la visita.','Acceso restringido; no fue posible el ingreso.','Sin novedades relevantes.'];
+// Origen (lon, lat) de los datos de prueba: centro de Guayaquil. Los predios de demostración se ubican a partir de este punto.
+const ORIGEN_DEMO_DEFECTO = {x0:-79.88621, y0:-2.19616, geo:true};
+// Sin datos de demostración en el código. Estos códigos solo sirven para reconocer y retirar
+// predios de ejemplo guardados por versiones anteriores en el navegador. No se cargan nuevos.
+const CODIGOS_SIMULACION_ANTIGUOS = new Set(["3-31-1-0-0-0", "3-31-2-0-0-0", "3-31-3-0-0-0", "3-32-4-0-0-0", "3-32-5-0-0-0", "3-32-6-0-0-0", "3-31-7-0-0-0", "3-31-8-0-0-0", "3-31-9-0-0-0", "3-32-10-0-0-0", "3-32-11-0-0-0", "3-32-12-0-0-0", "3-31-13-0-0-0", "3-31-14-0-0-0", "3-31-15-0-0-0", "3-32-16-0-0-0", "3-32-17-0-0-0", "3-32-18-0-0-0", "3-31-19-0-0-0", "3-31-20-0-0-0", "3-31-21-0-0-0", "3-32-22-0-0-0", "3-32-23-0-0-0", "3-32-24-0-0-0", "3-31-25-0-0-0", "3-31-26-0-0-0", "3-31-27-0-0-0", "3-32-28-0-0-0", "3-32-29-0-0-0", "3-32-30-0-0-0"]);
+
+function estadoInicial(){
+  return {predios:[], amenazas:[], inspecciones:{}, actualizaciones:[], asignaciones:{}, notificaciones:[],
+          auditoria:[], fuentesPDF:{}, avisosKeys:[], evidencia:{}, fuentes:[], documentos:[],
+          reglas:{diasInspeccion:365, umbralArea:0.02, maloEsAlta:true, umbralGPS:100, plazoDias:14, vigenciaDias:365},
+          fuenteDatos:'vacio', origen:{x0:0,y0:0,geo:false}, institucion:'Institución municipal (editar en Datos)', responsable:''};
+}
+let S = estadoInicial();
+let USUARIO = null;
+let vista = 'tareas';
+let filtro = 'TODAS', busq = '', sel = null, filtroNoti = 'todas', filtroAud = '';
+let VB = null, svgRef = null, drag = null, movido = false;
+let capas = {predios:true, amenazas:true};
+let FILTRO_ACT = 'pendiente';
+let TMP = {codigo:null, gps:null, fotos:[], danos:[], analisis:null};
+let MENSAJE = {predio:null, plantilla:'aviso', texto:''};
+
+// =====================================================================
+//  PERSISTENCIA (datos en el navegador) + FOTOS EN INDEXEDDB
+// =====================================================================
+function guardar(){
+  EVAL_VER++;
+  try{ localStorage.setItem(CLAVE, JSON.stringify(S)); }
+  catch(e){ show('No hay espacio suficiente en el navegador. Exporta un respaldo y revisa Datos.'); }
+}
+function cargarEstado(){
+  try{
+    const g = JSON.parse(localStorage.getItem(CLAVE) || localStorage.getItem(CLAVE_ANTIGUA));
+    if(g && Array.isArray(g.predios) && g.predios.length){
+      S = Object.assign(estadoInicial(), g);
+      // Datos de prueba guardados antes del mapa base: se les asigna el origen de demostración
+      if(S.fuenteDatos==='ejemplo' && !(S.origen && S.origen.geo)) S.origen = JSON.parse(JSON.stringify(window.ORIGEN_DEMO || ORIGEN_DEMO_DEFECTO));
+    }
+    else { S = estadoInicial(); S.fuenteDatos = 'vacio'; sel = null; }
+  }catch(e){ S = estadoInicial(); S.fuenteDatos = 'vacio'; sel = null; }
+  try{ const id = localStorage.getItem(CLAVE_SESION) || localStorage.getItem(CLAVE_SESION_ANTIGUA); USUARIO = USUARIOS.find(u=>u.id===id) || null; }catch(e){}
+}
+// Un registro es de simulación si lleva la marca simulado, o si tiene una huella inequívoca
+// de los datos de ejemplo. Los códigos de predio NO se usan como huella: pueden coincidir con datos reales.
+function esSimulado(tipo, x){
+  if(!x) return false;
+  if(x.simulado === false) return false; // marcado como dato real (p. ej. conservado con registros reales)
+  if(x.simulado === true) return true;
+  if(tipo === 'predio')     return S.fuenteDatos === 'ejemplo' && CODIGOS_SIMULACION_ANTIGUOS.has(x.codigo); // guardados antes de esta marca
+  if(tipo === 'amenaza')    return x.fuente === 'Datos de ejemplo';
+  if(tipo === 'inspeccion') return String(x.id || '').startsWith('INS-DEMO-');
+  return false;
+}
+function haySimulacion(){
+  return S.predios.some(p=>esSimulado('predio',p)) || S.amenazas.some(z=>esSimulado('amenaza',z)) ||
+         Object.values(S.inspecciones).flat().some(i=>esSimulado('inspeccion',i));
+}
+// Borra SOLO registros de simulación. Los registros creados a mano se conservan.
+// Un predio de simulación que tenga registros reales asociados se conserva y deja de estar marcado.
+function quitarSimulacion(){
+  Object.keys(S.inspecciones).forEach(c=>{
+    S.inspecciones[c] = S.inspecciones[c].filter(i=>!esSimulado('inspeccion', i));
+    if(!S.inspecciones[c].length) delete S.inspecciones[c];
+  });
+  // Un predio de ejemplo se conserva si tiene inspecciones reales (pasa a ser dato real).
+  // Si solo tiene una asignación o actualización sin marca, no se puede clasificar con seguridad:
+  // se conserva y sigue marcado para revisión.
+  const conInspeccionReal = new Set(Object.keys(S.inspecciones));
+  const paraRevision = new Set();
+  Object.entries(S.asignaciones||{}).forEach(([c,a])=>{ if(!(a && a.simulado)) paraRevision.add(c); });
+  S.actualizaciones.forEach(a=>{ if(!(a.simulado || String(a.id||'').includes('INS-DEMO-'))) paraRevision.add(a.codigo); });
+  const quitados = new Set(), conservados = [], revision = [];
+  S.predios = S.predios.filter(p=>{
+    if(!esSimulado('predio', p)) return true;
+    if(conInspeccionReal.has(p.codigo)){ p.simulado = false; conservados.push(p.codigo); return true; }
+    if(paraRevision.has(p.codigo)){ p.simulado = true; revision.push(p.codigo); return true; }
+    quitados.add(p.codigo); return false;
+  });
+  S.amenazas = S.amenazas.filter(z=>!esSimulado('amenaza', z));
+  const esNotiSim = n => String(n.id||'').includes('INS-DEMO-') || n.simulado === true || (quitados.has(n.codigo));
+  S.notificaciones = (S.notificaciones||[]).filter(n=>!esNotiSim(n));
+  S.auditoria = (S.auditoria||[]).filter(a => !(quitados.has(a.codigo) || /prueba|simulaci|restaur.*datos/i.test(a.accion||'')));
+  Object.keys(S.asignaciones||{}).forEach(c=>{ const a=S.asignaciones[c]; if(quitados.has(c) || (a && a.simulado)) delete S.asignaciones[c]; });
+  S.actualizaciones = S.actualizaciones.filter(a=>!(quitados.has(a.codigo) || a.simulado || String(a.id||'').includes('INS-DEMO-')));
+  Object.keys(S.fuentesPDF||{}).forEach(c=>{ if(quitados.has(c)) delete S.fuentesPDF[c]; });
+  return {predios: quitados.size, conservados: conservados.length, paraRevision: revision};
+}
+function etiquetaFuente(){
+  if(haySimulacion()) return 'Incluye datos de SIMULACIÓN (ficticios)';
+  if(!S.predios.length) return 'Sin datos reales cargados en este navegador';
+  return S.fuenteDatos;
+}
+
+const DB = (()=>{
+  let db = null;
+  function abrir(){
+    return new Promise((res,rej)=>{
+      if(db) return res(db);
+      const r = indexedDB.open('iacat-fotos', 2);
+      r.onupgradeneeded = ()=>{
+        const d = r.result;
+        if(!d.objectStoreNames.contains('fotos')) d.createObjectStore('fotos', {keyPath:'id'});
+        if(!d.objectStoreNames.contains('documentos')) d.createObjectStore('documentos', {keyPath:'id'});
+      };
+      r.onsuccess = ()=>{ db=r.result; res(db); };
+      r.onerror = ()=>rej(r.error);
+    });
+  }
+  async function op(modo, fn, store='fotos'){
+    await abrir();
+    return new Promise((res,rej)=>{
+      const t = db.transaction(store, modo);
+      const req = fn(t.objectStore(store));
+      t.oncomplete = ()=>res(req.result);
+      t.onerror = ()=>rej(t.error);
+      t.onabort = ()=>rej(t.error);
+    });
+  }
+  return {
+    guardar: f => op('readwrite', st=>st.put(f)),
+    obtener: id => op('readonly', st=>st.get(id)),
+    todas: () => op('readonly', st=>st.getAll()),
+    borrar: id => op('readwrite', st=>st.delete(id)),
+    guardarDoc: f => op('readwrite', st=>st.put(f), 'documentos'),
+    obtenerDoc: id => op('readonly', st=>st.get(id), 'documentos')
+  };
+})();
+
+function show(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(show._t); show._t = setTimeout(()=>t.classList.remove('on'), 3400);
+}
+
+// =====================================================================
+//  HELPERS
+// =====================================================================
+const fmt = n => Number(n).toLocaleString('es-EC',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const v = t => (t==null || t==='') ? '<i class="n">No registrado</i>' : esc(t);
+const m = n => n==null ? '<i class="n">No registrado</i>' : fmt(n)+' m²';
+const hoy = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const horaAhora = () => new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+const sumarDias = n => { const d=new Date(); d.setDate(d.getDate()+n); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const lista = arr => arr.length ? '<ul style="margin:4px 0 8px;padding-left:18px">'+arr.map(x=>`<li>${x}</li>`).join('')+'</ul>' : '<p class="muted">Ninguno.</p>';
+const tabla = (cab, filas) => `<table><tr>${cab.map(c=>`<th>${c}</th>`).join('')}</tr>${filas.map(f=>`<tr>${f.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cab.length}" class="muted">Sin registros.</td></tr>`}</table>`;
+const badge = t => `<span class="badge ${t==='SIN DATO'?'SIN':t}">${t}</span>`;
+const nombreUsuario = id => (USUARIOS.find(u=>u.id===id)||{}).nombre || id;
+const zonaDe = codigo => codigo.split('-').slice(0,2).join('-');
+
+// =====================================================================
+//  PERMISOS Y SESIÓN
+// =====================================================================
+const puedeVista = id => USUARIO && (PERMISOS[USUARIO.rol]||[]).includes(id);
+const puede = acc => USUARIO && (ACCIONES[acc]||[]).includes(USUARIO.rol);
+function iniciarSesion(id){
+  USUARIO = USUARIOS.find(u=>u.id===id);
+  localStorage.setItem(CLAVE_SESION, id);
+  vista = VISTA_INICIAL[USUARIO.rol];
+  registrar('inicio de sesión', '', USUARIO.cargo);
+  generarAvisos();
+  render();
+}
+function cerrarSesion(){
+  registrar('cierre de sesión', '', '');
+  localStorage.removeItem(CLAVE_SESION);
+  USUARIO = null; render();
+}
+function registrar(accion, codigo, detalle){
+  S.auditoria.unshift({id:'AUD-'+Date.now()+'-'+Math.floor(Math.random()*1000), fecha:hoy(), hora:horaAhora(),
+    usuario: USUARIO ? USUARIO.nombre : 'Sistema', rol: USUARIO ? USUARIO.rol : 'sistema', accion, codigo: codigo||'', detalle: detalle||''});
+  if(S.auditoria.length > 2000) S.auditoria.length = 2000;
+  guardar();
+}
+
+// =====================================================================
+//  NOTIFICACIONES
+// =====================================================================
+function notificar({tipo, titulo, cuerpo, codigo='', roles=[], usuarios=[], clave=null}){
+  if(clave){
+    if(S.avisosKeys.includes(clave)) return false;
+    S.avisosKeys.push(clave);
+  }
+  S.notificaciones.unshift({id:'NOT-'+Date.now()+'-'+Math.floor(Math.random()*1000), fecha:hoy(), hora:horaAhora(),
+    tipo, titulo, cuerpo, codigo, roles, usuarios, leidas:[]});
+  if(S.notificaciones.length > 500) S.notificaciones.length = 500;
+  return true;
+}
+const notiPara = n => USUARIO && (n.roles.includes(USUARIO.rol) || n.usuarios.includes(USUARIO.id));
+const notisVisibles = () => S.notificaciones.filter(notiPara);
+const noLeidas = () => notisVisibles().filter(n=>!n.leidas.includes(USUARIO.id)).length;
+const ICONO_NOTI = {inspeccion:'✎', ubicacion:'⚠', decision:'✓', asignacion:'⇄', venc:'⏱', sinvisita:'⚑', pend:'◷', sistema:'i'};
+
+function generarAvisos(){
+  if(!S.predios.length) return;
+  const mes = hoy().slice(0,7);
+  S.predios.forEach(p=>{
+    const e = evaluar(p);
+    if(e.prioridad==='ALTA' && !vigente(p.codigo)){
+      notificar({tipo:'sinvisita', titulo:`Predio de prioridad alta sin visita: ${p.codigo}`,
+        cuerpo:`No hay inspección en los últimos ${S.reglas.diasInspeccion} días. ${e.motivos[0]||''}`,
+        codigo:p.codigo, roles:['supervisor'], clave:`sinvisita|${p.codigo}|${mes}`});
+    }
+  });
+  Object.entries(S.asignaciones).forEach(([codigo,a])=>{
+    const hechas = (S.inspecciones[codigo]||[]).some(r=>r.fecha>=a.fecha);
+    if(!hechas && a.plazo < hoy()){
+      notificar({tipo:'venc', titulo:`Plazo vencido: ${codigo}`,
+        cuerpo:`La visita asignada a ${a.nombre} venció el ${a.plazo}.`, codigo,
+        roles:['supervisor'], usuarios:[a.inspector], clave:`venc|${codigo}|${a.plazo}`});
+    }
+  });
+  S.actualizaciones.filter(a=>a.estado==='pendiente' && a.fecha < sumarDias(-7)).forEach(a=>{
+    notificar({tipo:'pend', titulo:`Actualización pendiente hace más de 7 días: ${a.codigo}`,
+      cuerpo:`${ETIQ[a.campo]}: propuesta por ${a.tecnico} el ${a.fecha}.`, codigo:a.codigo,
+      roles:['supervisor'], clave:`pend|${a.id}`});
+  });
+  guardar();
+}
+function marcarLeida(id){ const n=S.notificaciones.find(x=>x.id===id); if(n && !n.leidas.includes(USUARIO.id)) n.leidas.push(USUARIO.id); guardar(); }
+function marcarTodas(){ notisVisibles().forEach(n=>{ if(!n.leidas.includes(USUARIO.id)) n.leidas.push(USUARIO.id); }); guardar(); }
+
+// =====================================================================
+//  GEOMETRÍA Y UBICACIÓN
+// =====================================================================
+function areaPoligono(p){
+  let a=0; for(let i=0;i<p.length;i++){ const [x1,y1]=p[i],[x2,y2]=p[(i+1)%p.length]; a+=x1*y2-x2*y1; } return Math.abs(a)/2;
+}
+function dentro(pt, poly){
+  let c=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const [xi,yi]=poly[i],[xj,yj]=poly[j];
+    if(((yi>pt[1])!==(yj>pt[1])) && (pt[0] < (xj-xi)*(pt[1]-yi)/(yj-yi)+xi)) c=!c;
+  }
+  return c;
+}
+function bbox(poly){
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const [x,y] of poly){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  return {x0,y0,x1,y1};
+}
+function orient(a,b,c){ return (b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0]); }
+function enSegmento(a,b,c){ return Math.min(a[0],b[0])<=c[0] && c[0]<=Math.max(a[0],b[0]) && Math.min(a[1],b[1])<=c[1] && c[1]<=Math.max(a[1],b[1]); }
+function segmentosCruzan(p1,p2,p3,p4){
+  const o1=orient(p1,p2,p3), o2=orient(p1,p2,p4), o3=orient(p3,p4,p1), o4=orient(p3,p4,p2);
+  if(((o1>0&&o2<0)||(o1<0&&o2>0)) && ((o3>0&&o4<0)||(o3<0&&o4>0))) return true;
+  return (o1===0&&enSegmento(p1,p2,p3)) || (o2===0&&enSegmento(p1,p2,p4)) || (o3===0&&enSegmento(p3,p4,p1)) || (o4===0&&enSegmento(p3,p4,p2));
+}
+// Dos polígonos se intersectan si algún vértice de uno cae dentro del otro
+// o si alguna arista de uno cruza una arista del otro (franjas que atraviesan un predio).
+function cruzan(a,b){
+  const A=bbox(a), B=bbox(b);
+  if(A.x1<B.x0 || B.x1<A.x0 || A.y1<B.y0 || B.y1<A.y0) return false;
+  if(a.some(p=>dentro(p,b)) || b.some(p=>dentro(p,a))) return true;
+  for(let i=0;i<a.length;i++){
+    const p1=a[i], p2=a[(i+1)%a.length];
+    for(let j=0;j<b.length;j++){
+      if(segmentosCruzan(p1,p2,b[j],b[(j+1)%b.length])) return true;
+    }
+  }
+  return false;
+}
+function centroide(g){ return {x:g.reduce((s,c)=>s+c[0],0)/g.length, y:g.reduce((s,c)=>s+c[1],0)/g.length}; }
+function centroLatLon(p){
+  if(!S.origen || !S.origen.geo) return null;
+  const c = centroide(p.geometria);
+  return { lat: S.origen.y0 + c.y/110540, lon: S.origen.x0 + c.x/(111320*Math.cos(S.origen.y0*Math.PI/180)) };
+}
+function distanciaM(a,b){
+  const R=6371000, rad=x=>x*Math.PI/180;
+  const dLat=rad(b.lat-a.lat), dLon=rad(b.lon-a.lon);
+  const h=Math.sin(dLat/2)**2 + Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+
+// =====================================================================
+//  VALORES VIGENTES Y TRAZABILIDAD
+//  Orden: aprobación (VALIDADO) > dato PDF registrado (FUENTE) > catastro (FUENTE) > SIN DATO
+// =====================================================================
+function valorVigente(p, campo){
+  const ap = S.actualizaciones.filter(a=>a.codigo===p.codigo && a.campo===campo && a.estado==='aprobada')
+                              .sort((a,b)=>(a.fecha_decision||'').localeCompare(b.fecha_decision||''));
+  if(ap.length){ const u=ap[ap.length-1]; return {valor:u.propuesto, origen:'VALIDADO', ref:`Aprobado ${u.fecha_decision} por ${u.decidido_por||'—'}`}; }
+  const pdf = (S.fuentesPDF[p.codigo]||{})[campo];
+  if(pdf && pdf.valor!=null && pdf.valor!=='') return {valor:pdf.valor, origen:'FUENTE', ref:`PDF: ${pdf.ref}`};
+  const f = (p.fuente||{})[campo];
+  if(f!=null && f!=='') return p.origen==='manual'
+    ? {valor:f, origen:'VALIDADO', ref:`Registro manual (${p.registrado_por||'—'})`}
+    : {valor:f, origen:'FUENTE', ref:'Catastro'};
+  return {valor:null, origen:'SIN DATO', ref:'Sin fuente'};
+}
+function vigente(codigo){
+  const reg = S.inspecciones[codigo]||[];
+  if(!reg.length) return false;
+  const ult = reg.map(r=>r.fecha).sort().pop();
+  return (Date.now() - new Date(ult+'T00:00:00'))/86400000 <= S.reglas.diasInspeccion;
+}
+// Caché de evaluar(): se invalida cada vez que cambia el estado (guardar) o el día.
+let EVAL_VER = 0;
+const EVAL_CACHE = new Map();
+function evaluar(p){
+  const clave = EVAL_VER + '|' + hoy();
+  const c = EVAL_CACHE.get(p.codigo);
+  if(c && c.clave===clave && c.p===p) return c.res;
+  const res = calcularEvaluacion(p);
+  EVAL_CACHE.set(p.codigo, {clave, p, res});
+  return res;
+}
+// Los textos de motivos/brechas son texto plano: se escapan al pintarlos en HTML.
+function calcularEvaluacion(p){
+  const motivos=[], brechas=[], validar=[];
+  const zonas = S.amenazas.filter(z=>cruzan(p.geometria, z.geometria));
+  zonas.forEach(z=>motivos.push(`Intersecta «${z.nombre}» (${z.fuente}, ${z.fecha}).`));
+  const regs = (S.inspecciones[p.codigo]||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const ult = regs[0];
+  const malo = !!(ult && ult.valores && ult.valores.estado_conservacion==='Malo');
+  if(malo) motivos.push(`Última inspección (${ult.fecha}) registra estado de conservación malo.`);
+  if(ult && ult.discrepancias) motivos.push(`Última inspección (${ult.fecha}) registra discrepancias con el catastro.`);
+  const pend = S.actualizaciones.filter(a=>a.codigo===p.codigo && a.estado==='pendiente');
+  if(pend.length){ motivos.push(`${pend.length} actualización(es) pendiente(s) de aprobación.`); validar.push('Revisar y decidir las actualizaciones pendientes.'); }
+  if(!vigente(p.codigo)){ motivos.push(`Sin inspección en los últimos ${S.reglas.diasInspeccion} días.`); validar.push('Programar visita de verificación y registrar fotografías.'); }
+  if(valorVigente(p,'uso').valor==null) brechas.push('Falta el uso de edificación.');
+  if(valorVigente(p,'direccion').valor==null) brechas.push('Falta la dirección.');
+  if((p.fuente||{}).area_fuente==null) brechas.push('Falta el área registrada en la fuente.');
+  const sinC = ['pisos','material','tipo_construccion'].filter(c=>valorVigente(p,c).valor==null);
+  if(sinC.length) brechas.push(`Sin datos de construcción validados: ${sinC.map(c=>ETIQ[c].toLowerCase()).join(', ')}.`);
+  const areaCalc = areaPoligono(p.geometria);
+  const aF = (p.fuente||{}).area_fuente;
+  if(aF!=null){
+    const dif = Math.abs(areaCalc-aF)/aF;
+    if(dif > S.reglas.umbralArea) brechas.push(`El área del archivo (${fmt(aF)} m²) difiere ${Math.round(dif*100)}% de la geometría (${fmt(areaCalc)} m²).`);
+  }
+  if(brechas.length) validar.push('Completar o confirmar en campo los datos faltantes.');
+  if(zonas.length) validar.push('Verificar en campo el alcance real de la amenaza.');
+  const prioridad = (zonas.length || (malo && S.reglas.maloEsAlta)) ? 'ALTA' : (motivos.length || brechas.length) ? 'MEDIA' : 'BAJA';
+  return {zonas, motivos, brechas, validar, prioridad, areaCalc, ult, pend};
+}
+
+// =====================================================================
+//  INSPECCIÓN → PROPUESTAS DE ACTUALIZACIÓN
+// =====================================================================
+function proponer(ins){
+  const p = S.predios.find(x=>x.codigo===ins.codigo);
+  if(!p) return 0;
+  let n = 0;
+  CAMPOS.forEach(c=>{
+    const nuevo = ins.valores ? ins.valores[c] : null;
+    if(nuevo==null || nuevo==='') return;
+    if(ins.verificaciones && ins.verificaciones[c]==='no_verificable') return;
+    const actual = valorVigente(p,c).valor;
+    if(String(actual ?? '') === String(nuevo)) return;
+    if(S.actualizaciones.some(a=>a.inspeccion_id===ins.id && a.campo===c)) return;
+    S.actualizaciones.push({id:`ACT-${ins.id}-${c}`, codigo:p.codigo, campo:c, anterior:actual, propuesto:nuevo,
+      inspeccion_id:ins.id, tecnico:ins.tecnico, inspector_id:ins.inspector_id||null, fecha:ins.fecha,
+      estado:'pendiente', decidido_por:null, fecha_decision:null, motivo:null});
+    n++;
+  });
+  return n;
+}
+function decidir(id, aprobar){
+  const a = S.actualizaciones.find(x=>x.id===id); if(!a) return;
+  const quien = prompt('Nombre de quien decide:', USUARIO ? USUARIO.nombre : '');
+  if(!quien || !quien.trim()){ show('Se necesita el nombre de quien decide'); return; }
+  let motivo = null;
+  if(!aprobar){
+    motivo = prompt('Motivo del rechazo (obligatorio):', '');
+    if(!motivo || !motivo.trim()){ show('El rechazo necesita un motivo'); return; }
+  }
+  a.estado = aprobar ? 'aprobada' : 'rechazada';
+  a.decidido_por = quien.trim(); a.fecha_decision = hoy(); a.motivo = motivo ? motivo.trim() : null;
+  notificar({tipo:'decision', titulo:`Actualización ${aprobar?'aprobada':'rechazada'}: ${a.codigo}`,
+    cuerpo:`${ETIQ[a.campo]}: ${aprobar?'aprobada':'rechazada'} por ${a.decidido_por}${a.motivo?'. Motivo: '+a.motivo:''}.`,
+    codigo:a.codigo, roles: a.inspector_id ? [] : ['inspector'], usuarios: a.inspector_id ? [a.inspector_id] : []});
+  registrar(aprobar?'aprobó actualización':'rechazó actualización', a.codigo, `${ETIQ[a.campo]}`);
+  guardar(); render();
+  show(aprobar ? 'Actualización aprobada: queda como dato VALIDADO' : 'Actualización rechazada; el motivo queda en el historial');
+}
+
+// =====================================================================
+//  CARGA DE GEOJSON
+// =====================================================================
+const MAPEO = {
+  codigo:['codigo','COD_CATA','CODIGO_PREDIO','ID_PREDIO','cod_cata'], uso:['Uso_de_Edi','uso','USO'],
+  direccion:['Direccion','direccion','DIRECCION'], lindero_norte:['Lindero_No'], lindero_sur:['Lindero_Su'],
+  lindero_este:['Lindero_Es'], lindero_oeste:['Lindero_Oe'], frente_norte:['Longitud_N'], frente_sur:['Longitud_S'],
+  frente_este:['Longitud_E'], frente_oeste:['Longitud_O'], area_fuente:['SHAPE__Area'], perimetro_fuente:['SHAPE__Length'],
+  nombre:['nombre','NOMBRE','name','NAME','Name','tipo','TIPO']
+};
+const campoGeo = (pr,nombres) => { for(const n of nombres){ if(pr[n]!=null && pr[n]!=='') return pr[n]; } return null; };
+const numero = x => { if(x==null) return null; const n=parseFloat(String(x).replace(',','.')); return isNaN(n)?null:n; };
+function anillo(geom){
+  if(!geom) return null;
+  const polis = geom.type==='Polygon' ? [geom.coordinates] : geom.type==='MultiPolygon' ? geom.coordinates : null;
+  if(!polis) return null;
+  let mejor=null, mejorA=-1;
+  polis.forEach(p=>{ const r=p[0]; const a=areaPoligono(r); if(a>mejorA){ mejorA=a; mejor=r; } });
+  return mejor;
+}
+function aMetros(anillos, origen){
+  let x0,y0,geo;
+  if(origen){ ({x0,y0,geo}=origen); }
+  else{
+    const todos = anillos.flat();
+    x0 = todos.reduce((mn,c)=>Math.min(mn,c[0]), Infinity);
+    y0 = todos.reduce((mn,c)=>Math.min(mn,c[1]), Infinity);
+    geo = todos.every(c=>Math.abs(c[0])<=180 && Math.abs(c[1])<=90);
+  }
+  const kx = geo ? 111320*Math.cos(y0*Math.PI/180) : 1, ky = geo ? 110540 : 1;
+  return {res: anillos.map(r=>r.map(c=>[+(((c[0]-x0)*kx).toFixed(2)), +(((c[1]-y0)*ky).toFixed(2))])), origen:{x0,y0,geo}};
+}
+async function importarGeo(archivo, tipo){
+  if(!puede('importar')){ show('Solo el supervisor puede importar datos'); return; }
+  try{
+    const fc = proyectarAGeo(await leerCapa(archivo), ($('d-sis')||{}).value || 'auto');
+    if(tipo==='predios') avisarColumnas(fc);
+    const pares = (fc.features||[]).map(f=>({props:f.properties||{}, ring:anillo(f.geometry)})).filter(p=>p.ring);
+    if(!pares.length){ show('El archivo no tiene polígonos válidos'); return; }
+    if(tipo==='predios'){
+      const {res, origen} = aMetros(pares.map(p=>p.ring));
+      const hayTrabajo = Object.keys(S.inspecciones).length || S.actualizaciones.length || Object.keys(S.asignaciones).length || Object.keys(S.fuentesPDF).length;
+      if(hayTrabajo && !confirm('Cargar estos predios reemplaza la base actual. Se conservan las inspecciones, asignaciones y propuestas de los códigos que sigan existiendo; el resto se elimina. ¿Continuar?')) return;
+      S.origen = origen;
+      S.predios = pares.map((p,i)=>{
+        const pr = p.props;
+        return {
+          codigo: String(campoGeo(pr,MAPEO.codigo) ?? `sin-codigo-${i+1}`),
+          fid: campoGeo(pr,['FID','fid']),
+          fuente: {
+            uso: campoGeo(pr,MAPEO.uso), direccion: campoGeo(pr,MAPEO.direccion),
+            linderos:{norte:campoGeo(pr,MAPEO.lindero_norte), sur:campoGeo(pr,MAPEO.lindero_sur), este:campoGeo(pr,MAPEO.lindero_este), oeste:campoGeo(pr,MAPEO.lindero_oeste)},
+            frentes:{norte:numero(campoGeo(pr,MAPEO.frente_norte)), sur:numero(campoGeo(pr,MAPEO.frente_sur)), este:numero(campoGeo(pr,MAPEO.frente_este)), oeste:numero(campoGeo(pr,MAPEO.frente_oeste))},
+            area_fuente: numero(campoGeo(pr,MAPEO.area_fuente)), perimetro_fuente: numero(campoGeo(pr,MAPEO.perimetro_fuente))
+          },
+          geometria: res[i]
+        };
+      });
+      const cods = new Set(S.predios.map(p=>p.codigo));
+      S.inspecciones = Object.fromEntries(Object.entries(S.inspecciones).filter(([c])=>cods.has(c)));
+      S.asignaciones = Object.fromEntries(Object.entries(S.asignaciones).filter(([c])=>cods.has(c)));
+      S.actualizaciones = S.actualizaciones.filter(a=>cods.has(a.codigo));
+      S.fuentesPDF = Object.fromEntries(Object.entries(S.fuentesPDF).filter(([c])=>cods.has(c)));
+      S.fuenteDatos = 'archivo: ' + archivo.name;
+      registrarFuente(archivo, 'predios', S.predios.length);
+      sel = S.predios[0].codigo; VB = null;
+      registrar('cargó predios', '', `${S.predios.length} predios desde ${archivo.name}`);
+      show(`${S.predios.length} predios cargados. Se conservaron los registros de los códigos que siguen existiendo.`);
+    } else {
+      if(!S.origen) S.origen = {x0:0,y0:0,geo:false};
+      const {res} = aMetros(pares.map(p=>p.ring), S.origen);
+      S.amenazas = pares.map((p,i)=>({id:`A${i+1}`, nombre:String(campoGeo(p.props,MAPEO.nombre)||'Capa de amenaza'), tipo:'amenaza', fuente:archivo.name, fecha:hoy(), geometria:res[i]}));
+      registrar('cargó zonas de amenaza', '', `${S.amenazas.length} zonas desde ${archivo.name}`);
+      registrarFuente(archivo, 'amenaza', S.amenazas.length);
+      show(`${S.amenazas.length} zona(s) de amenaza cargadas`);
+    }
+    guardar(); render();
+  }catch(err){ console.error(err); show('No se pudo cargar: ' + err.message); }
+}
+
+// =====================================================================
+//  FOTOS: COMPRESIÓN, CALIDAD Y DUPLICADOS (análisis sencillo, sin IA)
+// =====================================================================
+function cargarImagen(file){
+  return new Promise((res,rej)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('imagen no válida')); };
+    img.src = url;
+  });
+}
+function reducir(canvas,w,h){
+  const s = document.createElement('canvas'); s.width=w; s.height=h;
+  const g = s.getContext('2d'); g.drawImage(canvas,0,0,w,h);
+  return g.getImageData(0,0,w,h).data;
+}
+function grises(d){ const g=[]; for(let i=0;i<d.length;i+=4) g.push(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]); return g; }
+function analizarCalidad(canvas){
+  const g = grises(reducir(canvas,32,32));
+  const media = g.reduce((a,b)=>a+b,0)/g.length;
+  let dif=0; for(let y=0;y<32;y++) for(let x=0;x<31;x++) dif+=Math.abs(g[y*32+x]-g[y*32+x+1]);
+  const nitidez = +(dif/(32*31)).toFixed(1);
+  const avisos=[];
+  if(media<45) avisos.push('Muy oscura');
+  if(media>235) avisos.push('Sobreexpuesta');
+  if(nitidez<6) avisos.push('Posible poca nitidez');
+  return {media:Math.round(media), nitidez, avisos};
+}
+function ahash(canvas){ const g=grises(reducir(canvas,8,8)); const mu=g.reduce((a,b)=>a+b,0)/64; return g.map(x=>x>mu?'1':'0').join(''); }
+function distHash(a,b){ let n=0; for(let i=0;i<Math.min(a.length,b.length);i++) if(a[i]!==b[i]) n++; return n; }
+async function procesarFoto(file, categoria){
+  const img = await cargarImagen(file);
+  const k = Math.min(1, 1280/Math.max(img.width,img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  return {id:'FOTO-'+Date.now()+'-'+Math.floor(Math.random()*100000), categoria, nombre:file.name,
+          dataUrl: c.toDataURL('image/jpeg',0.72), hash: ahash(c), calidad: analizarCalidad(c)};
+}
+
+// =====================================================================
+//  VALIDACIÓN DE LA INSPECCIÓN ANTES DE ENVIAR
+// =====================================================================
+function validarTMP(p, tmp){
+  const bloq=[], avis=[], bien=[];
+  CATEGORIAS.filter(c=>c.req).forEach(c=>{ if(!tmp.fotos.some(f=>f.categoria===c.id)) bloq.push(`Falta la foto de ${c.t.toLowerCase()}.`); });
+  const previas = (S.inspecciones[p.codigo]||[]).flatMap(r=>r.fotos||[]);
+  tmp.fotos.forEach((f,i)=>{
+    f.calidad.avisos.forEach(a=>avis.push(`${esc(f.nombre)}: ${a.toLowerCase()}.`));
+    const dupTmp = tmp.fotos.some((o,j)=> j!==i && distHash(o.hash,f.hash)<=5);
+    const dupPrev = previas.some(o=>distHash(o.hash,f.hash)<=5);
+    if(dupTmp || dupPrev) avis.push(`${esc(f.nombre)}: parece duplicada de otra foto del predio.`);
+  });
+  let dist = null;
+  const c = centroLatLon(p);
+  if(tmp.gps && !c) avis.push('No se pudo comparar la ubicación GPS con el predio: la capa no tiene coordenadas geográficas. Revisa el sistema de coordenadas en Datos.');
+  if(tmp.gps && c){
+    dist = Math.round(distanciaM(tmp.gps, c));
+    if(dist > S.reglas.umbralGPS) avis.push(`La ubicación de la visita está a ${dist} m del predio (umbral: ${S.reglas.umbralGPS} m).`);
+    else bien.push(`Ubicación de la visita a ${dist} m del predio.`);
+  } else if(!tmp.gps) avis.push('No se capturó la ubicación GPS de la visita.');
+  else avis.push('El predio no tiene coordenadas geográficas cargadas; no se puede comparar la distancia.');
+  if(!bloq.length && !avis.length) bien.push('Fotos requeridas completas y sin observaciones de calidad.');
+  return {bloq, avis, bien, dist};
+}
+
+// =====================================================================
+//  PLANTILLAS DEL ASISTENTE DE MENSAJES (redacción por reglas, sin IA)
+// =====================================================================
+function datosPredio(p){
+  const e = evaluar(p);
+  const dir = valorVigente(p,'direccion'), uso = valorVigente(p,'uso');
+  const cita = x => `${x.valor ?? 'No registrado'} [${x.origen}]`;
+  return {e, dir, uso, cita};
+}
+const PLANTILLAS = {
+  aviso: {t:'Aviso de visita de campo', para:'inspector', cuerpo:(p)=>{
+    const d = datosPredio(p), a = S.asignaciones[p.codigo];
+    return `Asunto: Visita de verificación, predio ${p.codigo}
+
+Hola${a?' '+a.nombre:''}:
+
+Se te asigna la verificación de campo del predio ${p.codigo}.
+Dirección: ${d.dir.valor ?? 'no registrada'} [${d.dir.origen}]
+Uso registrado: ${d.uso.valor ?? 'no registrado'} [${d.uso.origen}]
+Prioridad de revisión: ${d.e.prioridad} (informativa)
+${a ? `Plazo: ${a.plazo}` : 'Plazo: por definir con supervisión'}
+
+Qué revisar en campo:
+${d.e.validar.length ? d.e.validar.map(x=>'- '+x).join('\n') : '- Confirmar los datos del catastro y registrar fotografías.'}
+
+Fotografías requeridas: fachada, acceso y entorno. El interior, si aplica.
+
+Gracias.`;
+  }},
+  resumen: {t:'Resumen para supervisión', para:'supervisor', cuerpo:(p)=>{
+    const d = datosPredio(p);
+    return `Resumen del predio ${p.codigo}
+
+Prioridad de revisión: ${d.e.prioridad}
+Dirección: ${d.cita(d.dir)}
+Uso: ${d.cita(d.uso)}
+
+Motivos:
+${d.e.motivos.length ? d.e.motivos.map(x=>'- '+x).join('\n') : '- Ninguno.'}
+
+Brechas de información:
+${d.e.brechas.length ? d.e.brechas.map(x=>'- '+x).join('\n') : '- No se detectan.'}
+
+Actualizaciones pendientes: ${d.e.pend.length}
+Última inspección: ${d.e.ult ? `${d.e.ult.fecha}, ${d.e.ult.tecnico}` : 'ninguna registrada'}`;
+  }},
+  correccion: {t:'Solicitud de corrección al inspector', para:'inspector', cuerpo:(p)=>{
+    const d = datosPredio(p);
+    return `Solicitud de revisión, predio ${p.codigo}
+
+Se solicita revisar y completar los siguientes puntos en la próxima visita o con la documentación disponible:
+${d.e.brechas.length ? d.e.brechas.map(x=>'- '+x).join('\n') : '- No hay brechas abiertas.'}
+${d.e.ult && d.e.ult.discrepancias ? `\nDiscrepancia registrada: ${d.e.ult.discrepancias}` : ''}
+
+Cuando tengas la información, registra la inspección para que la supervisión la revise.`;
+  }},
+  ciudadano: {t:'Respuesta a consulta ciudadana', para:'ciudadano', cuerpo:(p)=>{
+    const d = datosPredio(p);
+    return `Consulta del predio ${p.codigo}
+
+Dirección registrada: ${d.dir.valor ?? 'No registrada en nuestros archivos'}
+Uso registrado: ${d.uso.valor ?? 'No registrado en nuestros archivos'}
+
+La información puede actualizarse con las visitas de verificación. Si detecta un dato incorrecto, puede presentar una solicitud ante la institución.`;
+  }}
+};
+
+// =====================================================================
+//  EXPORTAR / IMPORTAR (paquetes de inspección y respaldo completo)
+// =====================================================================
+async function exportarPaquete(){
+  const fotos = await DB.todas().catch(()=>[]);
+  const pk = {tipo:'iacat-paquete', version:VERSION, creado:new Date().toISOString(), creado_por:USUARIO.nombre,
+              inspecciones: Object.values(S.inspecciones).flat(), fotos};
+  descargar(JSON.stringify(pk), `iacat-paquete-${hoy()}.json`, 'application/json');
+  registrar('exportó paquete de inspecciones', '', `${pk.inspecciones.length} inspecciones, ${fotos.length} fotos`);
+}
+async function importarPaquete(archivo){
+  try{
+    const pk = JSON.parse(await archivo.text());
+    if(pk.tipo!=='iacat-paquete' || !Array.isArray(pk.inspecciones)) throw new Error('tipo');
+    const valida = ins => ins && typeof ins.id==='string' && typeof ins.codigo==='string' && /^\d{4}-\d{2}-\d{2}$/.test(ins.fecha||'') && ins.valores && typeof ins.valores==='object';
+    const descartadas = pk.inspecciones.filter(i=>!valida(i)).length;
+    let nuevas=0;
+    pk.inspecciones.filter(valida).forEach(ins=>{
+      ins.fotos = Array.isArray(ins.fotos) ? ins.fotos : [];
+      S.inspecciones[ins.codigo] = S.inspecciones[ins.codigo] || [];
+      if(!S.inspecciones[ins.codigo].some(r=>r.id===ins.id)){ S.inspecciones[ins.codigo].push(ins); proponer(ins); nuevas++; }
+    });
+    for(const f of pk.fotos||[]) await DB.guardar(f).catch(()=>{});
+    notificar({tipo:'inspeccion', titulo:`Paquete importado: ${nuevas} inspección(es) nueva(s)`,
+      cuerpo:`Creado por ${pk.creado_por} el ${String(pk.creado).slice(0,10)}.`, roles:['supervisor']});
+    registrar('importó paquete de inspecciones', '', `${nuevas} nuevas`);
+    guardar(); render(); show(`Paquete importado: ${nuevas} inspección(es) nueva(s)${descartadas?` · ${descartadas} descartada(s) por formato inválido`:''}`);
+  }catch(err){ show('El archivo no es un paquete de IA-CAT válido'); }
+}
+async function exportarRespaldo(){
+  const fotos = await DB.todas().catch(()=>[]);
+  descargar(JSON.stringify({tipo:'iacat-respaldo', version:VERSION, creado:new Date().toISOString(), S, fotos}), `iacat-respaldo-${hoy()}.json`, 'application/json');
+  registrar('exportó respaldo completo', '', '');
+}
+async function importarRespaldo(archivo){
+  try{
+    const g = JSON.parse(await archivo.text());
+    if(g.tipo!=='iacat-respaldo' || !g.S || !Array.isArray(g.S.predios) || typeof g.S.inspecciones!=='object') throw new Error('tipo');
+    if(!confirm(`Restaurar este respaldo reemplaza TODOS los datos actuales de este navegador (${g.S.predios.length} predios en el respaldo). ¿Continuar?`)) return;
+    S = Object.assign(estadoInicial(), g.S);
+    for(const f of g.fotos||[]) await DB.guardar(f).catch(()=>{});
+    guardar(); VB=null; sel = S.predios[0] ? S.predios[0].codigo : null;
+    registrar('importó respaldo completo', '', '');
+    render(); show('Respaldo restaurado');
+  }catch(err){ show('El archivo no es un respaldo válido de IA-CAT'); }
+}
+function descargar(contenido, nombre, tipo){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([contenido], {type:tipo}));
+  a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+}
+
+// =====================================================================
+//  ESTRUCTURA DE PANTALLA
+// =====================================================================
+function pintarShell(){
+  if(!USUARIO){
+    $('login').style.display = 'flex'; $('app').style.display = 'none';
+    renderLogin(); return;
+  }
+  $('login').style.display = 'none'; $('app').style.display = 'grid';
+  const grupos = {};
+  NAV.filter(n=>puedeVista(n.id)).forEach(n=>{ (grupos[n.g]=grupos[n.g]||[]).push(n); });
+  $('nav').innerHTML = Object.entries(grupos).map(([g,items])=>`
+    <div class="sep">${g}</div>
+    ${items.map(n=>`<button data-v="${n.id}" class="${vista===n.id?'on':''}"><span class="ic">${n.i}</span>${n.t}</button>`).join('')}`).join('');
+  document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{ vista=b.dataset.v; if(vista==='bandeja') VB=null; render(); });
+  $('perfil').innerHTML = `<b>${esc(USUARIO.nombre)}</b>${esc(USUARIO.cargo)}<br><span style="opacity:.7">Rol: ${USUARIO.rol}</span>`;
+  const nav = NAV.find(n=>n.id===vista);
+  $('titulo').textContent = nav ? nav.t : '';
+  $('subtitulo').textContent = `${S.institucion} · ${S.predios.length} predios · ${S.fuenteDatos}`;
+  const nn = noLeidas();
+  $('n-noti').textContent = nn; $('n-noti').style.display = nn ? 'block' : 'none';
+  // Sin banner fijo: los avisos de estado se muestran solo cuando son necesarios (errores, confirmaciones)
+  $('aviso').style.display = 'none';
+  $('aviso').textContent = '';
+  $('main').innerHTML = '';
+}
+function renderLogin(){
+  $('login').innerHTML = `
+    <div class="login-card">
+      <div class="marca"><span class="logo">◈</span><span>IA-CAT</span></div>
+      <h1 style="margin-top:14px">Plataforma de inspección y priorización</h1>
+      <p class="muted">Elige tu usuario para continuar.</p>
+      <div class="users">
+        ${USUARIOS.filter(u=>u.rol!=='ciudadano').map(u=>`<button class="user" data-u="${u.id}"><b>${u.nombre}</b><span>${u.cargo} · ${u.rol}</span></button>`).join('')}
+        <button class="user pub" data-u="publico"><b>Consulta ciudadana</b><span>Acceso público limitado, sin contraseña</span></button>
+      </div>
+      <label class="campo">Contraseña<input type="password" id="pw" value="${PASSWORD_PRUEBA}"></label>
+      <button class="btn" id="entrar">Entrar</button>
+      <div class="acc-row"><button class="btn sec mini" id="reset-datos">Borrar los datos de este navegador y empezar de cero</button></div>
+      <div class="nota">Los nombres son ficticios. Cuando tengamos la lista real de personas y roles, se reemplazan en la configuración.</div>
+    </div>`;
+  let elegido = null;
+  document.querySelectorAll('.user').forEach(b=>b.onclick=()=>{
+    elegido = b.dataset.u;
+    document.querySelectorAll('.user').forEach(x=>x.classList.toggle('on', x===b));
+  });
+  $('reset-datos').onclick = async ()=>{
+    if(!confirm('Esto borra TODO lo guardado en este navegador (predios cargados, inspecciones, fotos y auditoría) y vuelve a los datos de prueba. ¿Continuar?')) return;
+    try{
+      [CLAVE, CLAVE_ANTIGUA, CLAVE_SESION, CLAVE_SESION_ANTIGUA].forEach(k=>localStorage.removeItem(k));
+      Object.keys(localStorage).filter(k=>k.startsWith('iacat-borrador-')).forEach(k=>localStorage.removeItem(k));
+      await new Promise(res=>{ const r = indexedDB.deleteDatabase('iacat-fotos'); r.onsuccess = r.onerror = r.onblocked = ()=>res(); });
+    }catch(e){}
+    location.reload();
+  };
+  $('entrar').onclick = ()=>{
+    if(!elegido){ show('Elige un usuario'); return; }
+    if(elegido!=='publico' && $('pw').value !== PASSWORD_PRUEBA){ show('Contraseña incorrecta'); return; }
+    iniciarSesion(elegido);
+  };
+}
+
+function render(){
+  if(!USUARIO){ pintarShell(); return; }
+  if(!puedeVista(vista)) vista = VISTA_INICIAL[USUARIO.rol];
+  if(!S.predios.some(p=>p.codigo===sel)) sel = S.predios[0] ? S.predios[0].codigo : null;
+  if(vista!=='agregar'){ DRAW.modo = false; DRAW.puntos = []; }
+  pintarShell();
+  const main = $('main');
+  if(vista==='bandeja' || vista==='inspeccion' || vista==='agregar'){
+    main.innerHTML = `<div class="tri">
+      <aside class="card-col" id="colLista"></aside>
+      <section class="card-col ${(vista==='bandeja'||vista==='agregar')?'mapa':''}" id="colCentro"></section>
+      <aside class="card-col" id="colFicha"></aside></div>`;
+    if(vista==='agregar') renderFormAgregar(); else renderLista();
+  } else {
+    main.innerHTML = `<section class="card-col ${vista==='mapa-bd'?'mapa':'wide'}" id="colCentro"></section>`;
+  }
+  const vistas = {bandeja:renderMapa, inspeccion:renderInspeccion, tareas:renderTareas, asignaciones:renderAsignaciones,
+    actualizaciones:renderActualizaciones, notificaciones:renderNotificaciones, mensajes:renderMensajes, panel:renderPanel,
+    alertas:renderAlertas, informe:renderInforme, auditoria:renderAuditoria, datos:renderDatos, consulta:renderConsulta, 'mi-espacio':renderMiEspacio, agregar:renderMapa, 'mapa-bd':renderMapaBD};
+  (vistas[vista]||(()=>{}))();
+  if($('colFicha')) renderFicha();
+  if(vista==='informe') completarFotosInforme();
+}
+
+// =====================================================================
+//  LISTA DE PREDIOS
+// =====================================================================
+function visibles(){
+  const q = busq.trim().toLowerCase();
+  return S.predios.map(p=>({p, e:evaluar(p)})).filter(({p,e})=>{
+    const txt = (p.codigo+' '+(valorVigente(p,'direccion').valor||'')+' '+(valorVigente(p,'uso').valor||'')).toLowerCase();
+    return (filtro==='TODAS' || e.prioridad===filtro) && (!q || txt.includes(q));
+  });
+}
+function renderLista(){
+  const col = $('colLista'); if(!col) return;
+  col.innerHTML = `
+    <div class="col-head"><b>Predios</b><span class="muted" id="conteo"></span></div>
+    <input type="text" id="buscar" placeholder="Código, dirección o uso" value="${esc(busq)}">
+    <div class="chips" id="chips"></div>
+    <div id="lista"></div>
+    <div class="lab">Capas</div>
+    <label class="capa"><input type="checkbox" id="c-predios" ${capas.predios?'checked':''}> Predios</label>
+    <label class="capa"><input type="checkbox" id="c-amen" ${capas.amenazas?'checked':''}> Zonas de amenaza</label>
+    <div class="leyenda"><span><i class="dot" style="background:#d24b45"></i>Alta</span><span><i class="dot" style="background:#d89b18"></i>Media</span><span><i class="dot" style="background:#139b91"></i>Baja</span></div>`;
+  $('buscar').oninput = e=>{ busq = e.target.value; actualizarLista(); };
+  $('c-predios').onchange = e=>{ capas.predios = e.target.checked; renderMapa(); };
+  $('c-amen').onchange = e=>{ capas.amenazas = e.target.checked; renderMapa(); };
+  actualizarLista();
+}
+function actualizarLista(){
+  const items = visibles();
+  $('conteo').textContent = `${items.length} de ${S.predios.length}`;
+  $('chips').innerHTML = ['TODAS','ALTA','MEDIA','BAJA'].map(f=>`<span class="chip ${filtro===f?'on':''}" data-f="${f}">${f==='TODAS'?'Todas':f.charAt(0)+f.slice(1).toLowerCase()}</span>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{ filtro=c.dataset.f; actualizarLista(); if(vista==='bandeja') renderMapa(); });
+  $('lista').innerHTML = items.slice(0,400).map(({p,e})=>`
+    <div class="item ${p.codigo===sel?'active':''}" data-id="${esc(p.codigo)}">
+      <span class="tag ${e.prioridad}" style="float:right">${e.prioridad}</span>
+      <b>${esc(p.codigo)}</b>
+      <div class="muted">${v(valorVigente(p,'direccion').valor)}</div>
+    </div>`).join('') || '<p class="muted" style="padding:8px">Sin resultados con estos filtros.</p>';
+  document.querySelectorAll('#lista .item').forEach(el=>el.onclick=()=>{ sel=el.dataset.id; render(); });
+}
+
+// =====================================================================
+//  FICHA DEL PREDIO
+// =====================================================================
+function renderFicha(){
+  const col = $('colFicha'); if(!col) return;
+  const p = S.predios.find(x=>x.codigo===sel);
+  if(!p){ col.innerHTML = '<div class="empty"><b>Ningún predio seleccionado</b>Elige uno de la lista.</div>'; return; }
+  const e = evaluar(p);
+  const F = (p.fuente||{}).frentes||{}, L = (p.fuente||{}).linderos||{};
+  const asig = S.asignaciones[p.codigo];
+  const filasVig = CAMPOS.map(c=>{ const x=valorVigente(p,c); return `<div class="row"><span class="k">${ETIQ[c]} ${badge(x.origen)}</span><span>${v(x.valor)}<br><span class="muted">${esc(x.ref)}</span></span></div>`; }).join('');
+  const pend = S.actualizaciones.filter(a=>a.codigo===p.codigo && a.estado==='pendiente');
+  col.innerHTML = `
+    <div class="cab-card"><h2 style="margin:0">${esc(p.codigo)}</h2>${badge('FUENTE')}</div>
+    <div class="muted" style="margin:4px 0 6px">${v(valorVigente(p,'direccion').valor)}</div>
+    <div class="prio ${e.prioridad}"><b>Prioridad ${e.prioridad}</b><span class="muted">informativa</span></div>
+    ${asig ? `<div class="resumen">Asignado a <b>${esc(asig.nombre)}</b> · plazo ${asig.plazo}</div>` : '<div class="resumen muted">Sin asignar.</div>'}
+    <div class="lab">Motivos</div>
+    ${e.motivos.map(x=>`<div class="motivo">${esc(x)}</div>`).join('') || '<p class="muted">Ninguno.</p>'}
+    <div class="lab">Brechas de información</div>
+    ${e.brechas.map(x=>`<div class="brecha">${x}</div>`).join('') || '<p class="muted">No se detectan brechas.</p>'}
+    <div class="lab">Datos vigentes y origen</div>
+    ${filasVig}
+    <div class="row"><span class="k">Área del archivo ${badge('FUENTE')}</span><span>${m((p.fuente||{}).area_fuente)}</span></div>
+    <div class="row"><span class="k">Área de la geometría ${badge('CALCULADO')}</span><span>${m(e.areaCalc)}</span></div>
+    <div class="row"><span class="k">Frentes (m) ${badge('FUENTE')}</span><span>N ${v(F.norte)} · S ${v(F.sur)} · E ${v(F.este)} · O ${v(F.oeste)}</span></div>
+    <div class="row"><span class="k">Linderos ${badge('FUENTE')}</span><span>N: ${v(L.norte)}<br>S: ${v(L.sur)}<br>E: ${v(L.este)}<br>O: ${v(L.oeste)}</span></div>
+    <div class="row"><span class="k">Última inspección ${badge('VALIDADO')}</span><span>${e.ult ? `${e.ult.fecha} · ${esc(e.ult.tecnico)} · ${esc(e.ult.valores.estado_conservacion||'—')}` : 'Ninguna registrada'}</span></div>
+    ${pend.length ? `<div class="lab">Pendientes de aprobación</div>${pend.map(a=>`<div class="motivo">${ETIQ[a.campo]}: ${v(a.anterior)} → <b>${esc(a.propuesto)}</b> (${esc(a.tecnico)}, ${a.fecha})</div>`).join('')}` : ''}
+    ${bloqueSimulacion(p)}
+    ${bloqueFuentes(p)}
+    ${timeline(p)}
+    <div class="lab">Requiere validación en campo</div>
+    ${e.validar.map(x=>`<div class="valid">${x}</div>`).join('') || '<p class="muted">Ninguna por ahora.</p>'}
+    <div class="lab">Análisis con IA</div>
+    <div class="row"><span class="k">Modelo de IA ${badge('IA')}</span><span class="muted">El análisis con IA se genera en la inspección de campo (sección 5b) y solo aparece en el informe si el técnico lo valida. Las prioridades de arriba se calculan por reglas.</span></div>
+    <p class="muted" style="margin-top:12px"><b>FUENTE</b> catastro o PDF registrado · <b>CALCULADO</b> obtenido con código · <b>IA</b> modelo · <b>VALIDADO</b> aprobado · <b>SIN DATO</b> no existe en fuente.</p>
+    <div class="acc-row" style="margin-top:10px">
+      ${puede('inspeccionar') ? `<button class="btn" data-ir="inspeccion">Registrar inspección</button>` : ''}
+      <button class="btn sec" data-ir="mensajes">Redactar mensaje</button>
+    </div>`;
+  col.querySelectorAll('[data-ir]').forEach(b=>b.onclick=()=>{
+    vista = b.dataset.ir;
+    if(vista==='mensajes') MENSAJE.predio = p.codigo;
+    render();
+  });
+}
+
+// =====================================================================
+//  MAPA INTERACTIVO
+// =====================================================================
+function limitesTotales(){
+  const todos = [...S.predios.map(p=>p.geometria), ...S.amenazas.map(z=>z.geometria)].flat();
+  if(!todos.length) return {x:0,y:-100,w:200,h:200};
+  const xs=todos.map(c=>c[0]), ys=todos.map(c=>c[1]);
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const pad = Math.max(25,(x1-x0)*0.05);
+  return {x:x0-pad, y:-y1-pad, w:(x1-x0)+2*pad, h:(y1-y0)+2*pad};
+}
+function aplicarVB(){ if(svgRef && VB) svgRef.setAttribute('viewBox', `${VB.x} ${VB.y} ${VB.w} ${VB.h}`); }
+function zoom(f){
+  if(!VB) return;
+  const cx=VB.x+VB.w/2, cy=VB.y+VB.h/2;
+  VB.w*=f; VB.h*=f; VB.x=cx-VB.w/2; VB.y=cy-VB.h/2; aplicarVB();
+}
+// ---------- Mapa base real (Leaflet + OpenStreetMap / satélite) ----------
+// Se usa cuando los predios tienen coordenadas geográficas (S.origen.geo) y Leaflet cargó.
+let LMAP = null, LVIEW = null, LBASE = 'calles';
+const usarLeaflet = () => typeof L !== 'undefined' && S.origen && S.origen.geo;
+function aLatLon(c){
+  const o = S.origen;
+  return [o.y0 + c[1]/110540, o.x0 + c[0]/(111320*Math.cos(o.y0*Math.PI/180))];
+}
+function deLatLon(ll){
+  const o = S.origen;
+  return [+((ll.lng-o.x0)*111320*Math.cos(o.y0*Math.PI/180)).toFixed(2), +((ll.lat-o.y0)*110540).toFixed(2)];
+}
+function renderMapaLeaflet(){
+  const col = $('colCentro');
+  if(LMAP){ try{ LMAP.remove(); }catch(e){} LMAP = null; }
+  col.innerHTML = `<div id="lmap"></div>
+    <div class="lctrl"><button id="l-home" title="Ver todos los predios">⌂ Ver todo</button></div>
+    <div class="mapa-leg">${DRAW.modo ? 'Haz clic en el mapa para marcar los vértices' : 'Toca un predio para ver su ficha · arriba a la derecha cambias a satélite'}</div>`;
+  // Los servidores de OpenStreetMap bloquean páginas abiertas como archivo local (error 403); CARTO sí permite este uso.
+  const calles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom:19, subdomains:'abcd', attribution:'© OpenStreetMap contributors © CARTO'});
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'Imágenes © Esri'});
+  LMAP = L.map('lmap', {zoomControl:true, preferCanvas:true});
+  let avisoTiles = false;
+  [calles, sat].forEach(t=>t.on('tileerror', ()=>{ if(!avisoTiles){ avisoTiles = true; show('No se descargan los mosaicos del mapa. Revisa tu conexión a internet o prueba otro navegador.'); } }));
+  (LBASE==='satelite' ? sat : calles).addTo(LMAP);
+  L.control.layers({'Calles':calles, 'Satélite':sat}, null, {position:'topright'}).addTo(LMAP);
+  LMAP.on('baselayerchange', e=>{ LBASE = e.name==='Satélite' ? 'satelite' : 'calles'; });
+
+  const vis = new Set(visibles().map(x=>x.p.codigo));
+  const grupo = L.featureGroup();
+  if(capas.amenazas) S.amenazas.forEach(z=>{
+    L.polygon(z.geometria.map(aLatLon), {color:'#c98a00', weight:1.5, dashArray:'6 4', fillColor:'#e6aa32', fillOpacity:.25, interactive:false}).addTo(grupo);
+  });
+  if(capas.predios) S.predios.filter(p=>vis.has(p.codigo)).forEach(p=>{
+    const e = evaluar(p);
+    const color = e.prioridad==='ALTA' ? '#d24b45' : e.prioridad==='MEDIA' ? '#d89b18' : '#139b91';
+    const act = p.codigo===sel;
+    const poly = L.polygon(p.geometria.map(aLatLon), {color:act?'#0f2a44':color, weight:act?3:1.5, fillColor:color, fillOpacity:act?.6:.35, interactive:!DRAW.modo});
+    poly.bindTooltip(`<b>${esc(p.codigo)}</b> · ${e.prioridad}<br>${esc(valorVigente(p,'direccion').valor||'Sin dirección')}`, {sticky:true, className:'iacat'});
+    poly.on('click', ()=>{ sel = p.codigo; render(); });
+    poly.addTo(grupo);
+    if(act) poly.bringToFront();
+  });
+  if(DRAW.modo && DRAW.puntos.length){
+    L.polygon(DRAW.puntos.map(aLatLon), {color:'#0f7f76', weight:2, dashArray:'5 3', fillColor:'#14a095', fillOpacity:.25, interactive:false}).addTo(grupo);
+    DRAW.puntos.forEach(c=>L.circleMarker(aLatLon(c), {radius:5, color:'#0f7f76', fillColor:'#0f7f76', fillOpacity:1, interactive:false}).addTo(grupo));
+  }
+  grupo.addTo(LMAP);
+  const ajustar = () => { const b = grupo.getBounds(); if(b.isValid()) LMAP.fitBounds(b, {padding:[30,30]}); else LMAP.setView(aLatLon([0,0]), 16); };
+  if(LVIEW) LMAP.setView(LVIEW.center, LVIEW.zoom); else ajustar();
+  LMAP.on('moveend', ()=>{ LVIEW = {center:LMAP.getCenter(), zoom:LMAP.getZoom()}; });
+  if(DRAW.modo) LMAP.on('click', e=>{ DRAW.puntos.push(deLatLon(e.latlng)); renderMapa(); actualizarEstadoDraw(); });
+  $('l-home').onclick = ajustar;
+  setTimeout(()=>{ if(LMAP) LMAP.invalidateSize(); }, 60);
+}
+function renderMapa(){
+  const col = $('colCentro'); if(!col) return;
+  if(!S.predios.length && vista!=='agregar'){ col.innerHTML = `<div class="empty"><b>Sin registros disponibles</b>No hay predios cargados en este navegador. Usa el mapa en vivo o importa predios desde Datos.</div>`; return; }
+  if(!VB){ VB = limitesTotales(); LVIEW = null; }
+  if(usarLeaflet()){ renderMapaLeaflet(); return; }
+  if(S.origen && S.origen.geo && typeof L === 'undefined') show('No se cargó el mapa base. Revisa tu conexión a internet y recarga con Ctrl+F5.');
+  if(LMAP){ try{ LMAP.remove(); }catch(e){} LMAP = null; }
+  const vis = visibles().map(x=>x.p.codigo);
+  const tot = S.predios.filter(p=>vis.includes(p.codigo));
+  const pts = g => g.map(c=>c.join(',')).join(' ');
+  let svg = `<svg viewBox="${VB.x} ${VB.y} ${VB.w} ${VB.h}" preserveAspectRatio="xMidYMid meet"><g transform="scale(1,-1)">`;
+  if(capas.amenazas) S.amenazas.forEach(z=>{
+    svg += `<polygon points="${pts(z.geometria)}" fill="rgba(230,170,50,.22)" stroke="#c98a00" stroke-width="1.2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`;
+  });
+  if(capas.predios) tot.forEach(p=>{
+    const e = evaluar(p);
+    const color = e.prioridad==='ALTA' ? '#d24b45' : e.prioridad==='MEDIA' ? '#d89b18' : '#139b91';
+    const act = p.codigo===sel;
+    svg += `<polygon data-id="${esc(p.codigo)}" points="${pts(p.geometria)}" fill="${color}" fill-opacity="${act?.6:.3}" stroke="${act?'#0f2a44':color}" stroke-width="${act?2.6:1.1}" vector-effect="non-scaling-stroke" style="cursor:pointer"/>`;
+  });
+  if(DRAW.modo && DRAW.puntos.length){
+    svg += `<polygon points="${pts(DRAW.puntos)}" fill="rgba(20,160,149,.25)" stroke="#0f7f76" stroke-width="2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/>`;
+    DRAW.puntos.forEach(c=>{ svg += `<circle cx="${c[0]}" cy="${c[1]}" r="${Math.max(1.5,VB.w/250)}" fill="#0f7f76"/>`; });
+  }
+  svg += `</g>`;
+  if(capas.predios && VB.w < 700) tot.forEach(p=>{
+    const c = centroide(p.geometria);
+    svg += `<text x="${c.x}" y="${-c.y}" font-size="${Math.max(3,VB.w/70)}" text-anchor="middle" fill="#14212e" stroke="#fff" stroke-width="${Math.max(.5,VB.w/400)}" paint-order="stroke">${esc(p.codigo)}</text>`;
+  });
+  svg += `</svg>
+    <div class="ctrl"><button id="z-in" title="Acercar">+</button><button id="z-out" title="Alejar">−</button><button id="z-home" title="Ver todo">⌂</button></div>
+    <div class="mapa-leg">Arrastra para moverte · rueda o pellizco para acercar · toca un predio</div>`;
+  col.innerHTML = svg;
+  svgRef = col.querySelector('svg');
+  svgRef.addEventListener('click', e=>{ if(!movido && DRAW.modo) agregarPunto(e); });
+  $('z-in').onclick = ()=>zoom(0.8);
+  $('z-out').onclick = ()=>zoom(1.25);
+  $('z-home').onclick = ()=>{ VB = limitesTotales(); aplicarVB(); };
+  svgRef.addEventListener('wheel', e=>{ e.preventDefault(); zoom(e.deltaY<0?0.9:1.1); }, {passive:false});
+  svgRef.style.touchAction = 'none';
+  svgRef.addEventListener('pointerdown', e=>{
+    PTRS.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(PTRS.size===1){ drag={x:e.clientX,y:e.clientY,vb:{...VB}}; movido=false; pinch=null; }
+    else if(PTRS.size===2){
+      const [a,b] = [...PTRS.values()];
+      pinch = {d:Math.hypot(a.x-b.x,a.y-b.y)||1, vb:{...VB}, mx:(a.x+b.x)/2, my:(a.y+b.y)/2};
+      drag = null; movido = true;
+    }
+  });
+  const tip = $('tip');
+  svgRef.querySelectorAll('polygon[data-id]').forEach(el=>{
+    el.onclick = e=>{
+      if(movido) return;
+      if(DRAW.modo){ e.stopPropagation(); agregarPunto(e); return; }
+      sel = el.dataset.id; render();
+    };
+    el.onmousemove = e=>{
+      const p = S.predios.find(x=>x.codigo===el.dataset.id); if(!p) return;
+      const e2 = evaluar(p);
+      tip.style.display='block'; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
+      tip.innerHTML = `<b>${esc(p.codigo)}</b> · ${e2.prioridad}<br>${esc(valorVigente(p,'direccion').valor||'Sin dirección')}`;
+    };
+    el.onmouseleave = ()=>{ tip.style.display='none'; };
+  });
+}
+// Arrastre y pellizco con pointer events (ratón, táctil y lápiz)
+const PTRS = new Map();
+let pinch = null;
+window.addEventListener('pointermove', e=>{
+  if(!PTRS.has(e.pointerId)) return;
+  PTRS.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(!svgRef || !VB) return;
+  if(pinch && PTRS.size>=2){
+    const [a,b] = [...PTRS.values()];
+    const d = Math.hypot(a.x-b.x,a.y-b.y) || 1;
+    const k = pinch.d / d;
+    const r = svgRef.getBoundingClientRect();
+    const fx = (pinch.mx-r.left)/r.width, fy = (pinch.my-r.top)/r.height;
+    const wx = pinch.vb.x + fx*pinch.vb.w, wy = pinch.vb.y + fy*pinch.vb.h;
+    VB.w = pinch.vb.w*k; VB.h = pinch.vb.h*k;
+    VB.x = wx - fx*VB.w; VB.y = wy - fy*VB.h; aplicarVB();
+    return;
+  }
+  if(!drag) return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if(Math.abs(dx)+Math.abs(dy)>4) movido=true;
+  const u = drag.vb.w / svgRef.clientWidth;
+  VB.x = drag.vb.x - dx*u; VB.y = drag.vb.y - dy*u; aplicarVB();
+});
+const soltarPuntero = e=>{
+  PTRS.delete(e.pointerId);
+  if(PTRS.size<2) pinch = null;
+  if(PTRS.size===0) drag = null;
+};
+window.addEventListener('pointerup', soltarPuntero);
+window.addEventListener('pointercancel', soltarPuntero);
+
+// =====================================================================
+//  INSPECCIÓN DE CAMPO
+// =====================================================================
+function renderInspeccion(){
+  const col = $('colCentro');
+  if(!puede('inspeccionar')){ col.innerHTML = '<div class="empty"><b>Sin permiso</b>Este rol no registra inspecciones.</div>'; return; }
+  const p = S.predios.find(x=>x.codigo===sel);
+  if(!p){ col.innerHTML = '<div class="empty"><b>Elige un predio</b>Selecciónalo en la lista de la izquierda.</div>'; return; }
+  if(TMP.codigo!==p.codigo) TMP = {codigo:p.codigo, gps:null, fotos:[], danos:[], analisis:null};
+  const val = c => valorVigente(p,c).valor ?? '';
+  const uso = valorVigente(p,'uso').valor, dir = valorVigente(p,'direccion').valor;
+  const hist = (S.inspecciones[p.codigo]||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const radios = (nombre, selV) => [['confirmado','Confirmado'],['corregido','Corregido'],['no_verificable','No verificable']]
+    .map(([k,t])=>`<label><input type="radio" name="${nombre}" value="${k}" ${selV===k?'checked':''}> ${t}</label>`).join('');
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Inspección de campo</h1><div class="muted">Predio <b>${esc(p.codigo)}</b> · lo que registres se envía a supervisión como propuesta. El catastro no cambia hasta que se apruebe.</div></div></div>
+
+    <h3>1. Identificación</h3>
+    <div class="grid2" style="grid-template-columns:1fr 1fr;gap:10px">
+      <label class="campo">Fecha de la visita<input type="date" id="f-fecha" value="${hoy()}"></label>
+      <label class="campo">Técnico responsable<input type="text" id="f-tec" value="${esc(USUARIO.nombre)}"></label>
+    </div>
+    <div class="acc-row"><button class="btn sec" id="f-gps">Capturar ubicación GPS</button></div>
+    <div class="gps" id="f-gps-t">${TMP.gps ? `Lat ${TMP.gps.lat}, Lon ${TMP.gps.lon} (±${TMP.gps.precision_m} m)` : 'Sin ubicación capturada.'}</div>
+
+    <h3>2. Verificación de datos del catastro</h3>
+    <div class="verif"><b>Uso de edificación</b> <span class="muted">· registrado: ${v(uso)}</span>
+      <div class="radios">${radios('ver-uso','confirmado')}</div>
+      <label class="campo">Uso observado<input type="text" id="v-uso" list="usos" value="${esc(val('uso'))}"></label></div>
+    <div class="verif"><b>Dirección</b> <span class="muted">· registrada: ${v(dir)}</span>
+      <div class="radios">${radios('ver-dir','confirmado')}</div>
+      <label class="campo">Dirección observada<input type="text" id="v-dir" value="${esc(val('direccion'))}"></label></div>
+    <datalist id="usos"><option>RESIDENCIAL</option><option>COMERCIAL</option><option>MIXTO</option><option>INDUSTRIAL</option><option>EQUIPAMIENTO</option></datalist>
+
+    <h3>3. Construcción</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <label class="campo">Número de pisos<input type="number" min="0" max="60" id="v-pisos" value="${esc(val('pisos'))}"></label>
+      <label class="campo">Material predominante<select id="v-mat">${['','Hormigón','Mampostería','Madera','Mixto','Otro'].map(o=>`<option ${o===val('material')?'selected':''}>${o}</option>`).join('')}</select></label>
+      <label class="campo">Tipo de construcción<select id="v-tipo">${['','Casa','Departamentos','Local comercial','Galpón','Mixto','Otro'].map(o=>`<option ${o===val('tipo_construccion')?'selected':''}>${o}</option>`).join('')}</select></label>
+      <label class="campo">Año de construcción<input type="number" min="1800" max="2026" id="v-anio" value="${esc(val('anio_construccion'))}"></label>
+      <label class="campo">Sistema estructural<select id="v-estr">${['','Hormigón armado','Mampostería confinada','Mampostería no reforzada','Madera','Acero','Otro'].map(o=>`<option ${o===val('estructura')?'selected':''}>${o}</option>`).join('')}</select></label>
+      <label class="campo">Estado de conservación<select id="v-estado">${['','Bueno','Regular','Malo','No verificable'].map(o=>`<option ${o===val('estado_conservacion')?'selected':''}>${o}</option>`).join('')}</select></label>
+    </div>
+
+    <h3>3b. Daños observados</h3>
+    <p class="muted">Registra cada daño por separado y asócialo a sus fotos (agrégalas en la sección 4). Esto alimenta el informe y el análisis con IA.</p>
+    <div id="f-danos"></div>
+    <button class="btn sec" id="f-add-dano">+ Agregar daño</button>
+
+    <h3>4. Registro fotográfico</h3>
+    <p class="muted">Las fotos se comprimen en tu equipo, se revisan (oscuridad, nitidez y duplicados) y se guardan solo al enviar. Las marcadas como obligatorias son necesarias para enviar.</p>
+    <div class="checklist">
+      ${CATEGORIAS.map(c=>`
+        <div class="cat">
+          <div class="cat-head"><b>${c.t}</b><span>${c.req?'<span class="req">Obligatoria</span>':'<span class="opt">Opcional</span>'}
+            ${TMP.fotos.some(f=>f.categoria===c.id) ? '<span class="ok-tag">✓ con foto</span>' : ''}</span></div>
+          <input type="file" accept="image/*" multiple data-cat="${c.id}" style="margin-top:8px">
+          <div class="gal" id="gal-${c.id}">${TMP.fotos.filter(f=>f.categoria===c.id).map(fotoHTML).join('')}</div>
+        </div>`).join('')}
+    </div>
+
+    <h3>4b. Lista de verificación</h3>
+    <p class="muted">Según el uso registrado (${esc(uso||'no registrado')}). Marca lo que observaste; queda guardado con la inspección.</p>
+    ${listaVerif(uso)}
+
+    <h3>5. Hallazgos</h3>
+    <label class="campo">Discrepancias con el catastro<textarea id="f-disc" placeholder="Ej.: se observa vivienda en un predio registrado como comercial"></textarea></label>
+    <label class="campo">Observaciones<textarea id="f-obs"></textarea></label>
+    <div class="chips">${OBS_FRECUENTES.map(t=>`<span class="chip" data-obs="${esc(t)}">+ ${esc(t)}</span>`).join('')}</div>
+
+    <h3>5b. Análisis preliminar con IA</h3>
+    <p class="muted">Genera una lectura orientativa de los daños a partir de tus datos y fotos. No es un diagnóstico estructural: revísalo y valídalo antes de que entre al informe.</p>
+    <div class="acc-row"><button class="btn" id="f-ia">Analizar con IA</button></div>
+    <div id="f-ia-res"></div>
+
+    <h3>6. Validación antes de enviar</h3>
+    <div id="f-val"></div>
+    <div class="acc-row"><button class="btn ok" id="f-guardar">Enviar inspección a supervisión</button><button class="btn sec" id="f-revisar">Revisar sin enviar</button><button class="btn sec" id="f-ficha">Imprimir ficha de visita</button></div>
+    <div class="muted" id="f-borr"></div>
+
+    <h3>Historial de inspecciones</h3>
+    ${hist.map(r=>`<div class="row"><span class="k">${r.fecha} · ${esc(r.tecnico)} ${badge('VALIDADO')}</span><span>Estado: ${esc(r.valores.estado_conservacion||'—')}. ${esc(r.observaciones||'')}${r.discrepancias?`<br><b>Discrepancia:</b> ${esc(r.discrepancias)}`:''}${r.alerta_ubicacion?`<br><span style="color:#a1342e">⚠ Ubicación a ${r.dist_m} m del predio</span>`:''}</span></div>`).join('') || '<p class="muted">Sin inspecciones registradas.</p>'}`;
+
+  $('f-gps').onclick = ()=>{
+    if(!navigator.geolocation){ show('Este navegador no permite obtener la ubicación'); return; }
+    navigator.geolocation.getCurrentPosition(pos=>{
+      TMP.gps = {lat:+pos.coords.latitude.toFixed(6), lon:+pos.coords.longitude.toFixed(6), precision_m:Math.round(pos.coords.accuracy)};
+      $('f-gps-t').textContent = `Lat ${TMP.gps.lat}, Lon ${TMP.gps.lon} (±${TMP.gps.precision_m} m)`;
+      mostrarValidacion(p);
+    }, ()=>show('No se pudo obtener la ubicación. Revisa los permisos del navegador.'), {enableHighAccuracy:true, timeout:15000});
+  };
+  document.querySelectorAll('input[type=file][data-cat]').forEach(inp=>{
+    inp.onchange = async e=>{
+      const cat = inp.dataset.cat;
+      show('Procesando fotos…');
+      for(const f of [...e.target.files]){
+        try{ TMP.fotos.push(await procesarFoto(f, cat)); }
+        catch(err){ show(`No se pudo leer ${f.name}`); }
+      }
+      e.target.value = '';
+      actualizarGalerias(p);
+    };
+  });
+  enlazarQuitar(p);
+  $('f-revisar').onclick = ()=>mostrarValidacion(p, true);
+  $('f-ficha').onclick = ()=>imprimirFichaVisita(p);
+  document.querySelectorAll('[data-obs]').forEach(c=>c.onclick=()=>{
+    const t = $('f-obs'); t.value = (t.value.trim() ? t.value.trim()+' ' : '') + c.dataset.obs; guardarBorrador(p);
+  });
+  col.oninput = ()=>guardarBorrador(p);
+  col.onchange = ()=>guardarBorrador(p);
+  restaurarBorrador(p);
+  pintarDanos(); pintarAnalisis();
+  $('f-add-dano').onclick = ()=>{ TMP.danos.push({id:'D-'+Date.now(), tipo:'', ubicacion:'', severidad:'', extension:'', descripcion:'', fotos:[]}); pintarDanos(); };
+  $('f-ia').onclick = ()=>analizarConIA(p);
+  $('f-guardar').onclick = ()=>guardarInspeccion(p);
+  mostrarValidacion(p);
+}
+// Actualiza solo las galerías y la validación, para no perder lo escrito en el formulario
+function actualizarGalerias(p){
+  if(TMP.danos){ TMP.danos.forEach(d=>d.fotos=d.fotos.filter(id=>TMP.fotos.some(f=>f.id===id))); pintarDanos(); }
+  CATEGORIAS.forEach(c=>{ const g=$('gal-'+c.id); if(g) g.innerHTML = TMP.fotos.filter(f=>f.categoria===c.id).map(fotoHTML).join(''); });
+  enlazarQuitar(p);
+  mostrarValidacion(p);
+}
+function enlazarQuitar(p){
+  document.querySelectorAll('[data-quitar]').forEach(b=>b.onclick=()=>{
+    TMP.fotos = TMP.fotos.filter(f=>f.id!==b.dataset.quitar);
+    actualizarGalerias(p);
+  });
+}
+
+// ---------- Daños observados y análisis con IA ----------
+const DANO_TIPOS = ['Grietas en muros','Humedad o filtraciones','Desprendimiento de revoque','Asentamiento o hundimiento','Fisuras en losas o vigas','Corrosión o deterioro de hierro','Daño en cubierta','Daño en instalaciones','Daño por inundación','Daño por incendio','Otro'];
+const DANO_UBIC = ['Fachada','Muros interiores','Losa o entrepiso','Cubierta','Cimentación','Columnas o vigas','Instalaciones','Otra'];
+const DANO_SEV = ['Leve','Moderada','Grave','Crítica'];
+const SEV_ORDEN = {'Leve':1,'Moderada':2,'Grave':3,'Crítica':4};
+const SEV_TAG = {'Leve':'BAJA','Moderada':'MEDIA','Grave':'ALTA','Crítica':'ALTA'};
+function sevMaxima(danos){ return (danos||[]).reduce((m,d)=>(SEV_ORDEN[d.severidad]||0)>(SEV_ORDEN[m]||0)?d.severidad:m,''); }
+function ultimaInspeccion(codigo){ return (S.inspecciones[codigo]||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha))[0]; }
+function resumenDanosTexto(codigo){
+  const u = ultimaInspeccion(codigo); if(!u) return '';
+  const n = (u.danos||[]).length;
+  return `<div class="muted" style="margin-top:6px">Última visita: ${n} daño(s)${n?' · severidad máxima '+sevMaxima(u.danos):''}</div>`;
+}
+function pintarDanos(){
+  const c = $('f-danos'); if(!c) return;
+  const opt = (lista, sel) => `<option value="">Elige…</option>${lista.map(t=>`<option ${t===sel?'selected':''}>${t}</option>`).join('')}`;
+  c.innerHTML = TMP.danos.length ? TMP.danos.map((d,i)=>`
+    <div class="verif dano" data-i="${i}">
+      <div class="cab-card"><b>Daño ${i+1}${d.tipo?' · '+esc(d.tipo):''}</b><button class="btn mini no" data-dquitar="${i}">Quitar</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">
+        <label class="campo">Tipo<select data-dk="tipo">${opt(DANO_TIPOS, d.tipo)}</select></label>
+        <label class="campo">Ubicación<select data-dk="ubicacion">${opt(DANO_UBIC, d.ubicacion)}</select></label>
+        <label class="campo">Severidad<select data-dk="severidad">${opt(DANO_SEV, d.severidad)}</select></label>
+        <label class="campo">Extensión aproximada<input type="text" data-dk="extension" placeholder="Ej.: 2 m en fachada norte" value="${esc(d.extension)}"></label>
+      </div>
+      <label class="campo">Descripción<textarea data-dk="descripcion" placeholder="Qué se observa y posible causa">${esc(d.descripcion)}</textarea></label>
+      <div class="muted">Fotos de este daño</div>
+      <div class="chips">${TMP.fotos.length ? TMP.fotos.map(f=>{ const on = d.fotos.includes(f.id); return `<label class="chip ${on?'on':''}" style="cursor:pointer"><input type="checkbox" data-dfoto="${esc(f.id)}" ${on?'checked':''} hidden>${esc(f.nombre)}</label>`; }).join('') : '<span class="muted">Agrega fotos en la sección 4 para asociarlas.</span>'}</div>
+    </div>`).join('') : '<p class="muted">Sin daños registrados. Si no observas daños, puedes dejarlo así.</p>';
+  c.querySelectorAll('[data-dk]').forEach(el=>{ el.oninput = el.onchange = ()=>{ TMP.danos[+el.closest('.dano').dataset.i][el.dataset.dk] = el.value; if(el.dataset.dk==='tipo') el.closest('.dano').querySelector('b').textContent = `Daño ${+el.closest('.dano').dataset.i+1}${el.value?' · '+el.value:''}`; }; });
+  c.querySelectorAll('[data-dfoto]').forEach(el=>{ el.onchange = ()=>{ const d = TMP.danos[+el.closest('.dano').dataset.i]; d.fotos = el.checked ? [...d.fotos, el.dataset.dfoto] : d.fotos.filter(x=>x!==el.dataset.dfoto); pintarDanos(); }; });
+  c.querySelectorAll('[data-dquitar]').forEach(b=>{ b.onclick = ()=>{ TMP.danos.splice(+b.dataset.dquitar,1); pintarDanos(); }; });
+}
+function pintarAnalisis(){
+  const c = $('f-ia-res'); if(!c) return;
+  if(!TMP.analisis){ c.innerHTML = ''; return; }
+  c.innerHTML = `<div class="verif">
+      <span class="badge IA">IA · preliminar</span>
+      <label class="campo">Texto del análisis (puedes editarlo antes de validar)<textarea id="f-ia-txt" style="min-height:170px">${esc(TMP.analisis.texto)}</textarea></label>
+      <label class="campo" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="f-ia-val" ${TMP.analisis.validado?'checked':''}> Lo he revisado y lo valido como parte de esta inspección</label>
+      <div class="nota">Solo el análisis que valides pasa al informe. Si no lo validas, se descarta al enviar.</div>
+    </div>`;
+  $('f-ia-txt').oninput = e=>{ TMP.analisis.texto = e.target.value; };
+  $('f-ia-val').onchange = e=>{ TMP.analisis.validado = e.target.checked; };
+}
+async function analizarConIA(p){
+  if(!TMP.danos.length){ show('Registra al menos un daño antes de analizar'); return; }
+  const btn = $('f-ia'); btn.disabled = true; btn.textContent = 'Analizando…';
+  const campo = id => ($(id)||{}).value || null;
+  const contexto = {
+    predio:p.codigo, uso_registrado:valorVigente(p,'uso').valor||null, uso_observado:campo('v-uso'),
+    anio_construccion:campo('v-anio'), pisos:campo('v-pisos'), sistema_estructural:campo('v-estr'),
+    material:campo('v-mat'), tipo_construccion:campo('v-tipo'), estado_conservacion_tecnico:campo('v-estado'),
+    lista_marcada:[...document.querySelectorAll('input[name=chk]:checked')].map(x=>x.value),
+    discrepancias:campo('f-disc'), observaciones:campo('f-obs'),
+    prioridad_del_sistema:evaluar(p).prioridad,
+    danos:TMP.danos.map((d,i)=>({n:i+1, tipo:d.tipo, ubicacion:d.ubicacion, severidad:d.severidad, extension:d.extension, descripcion:d.descripcion, fotos_asociadas:d.fotos.length}))
+  };
+  const fotosIA = TMP.fotos.filter(f=>TMP.danos.some(d=>d.fotos.includes(f.id))).slice(0,4);
+  const instruccion = `Eres apoyo técnico para inspectores de edificaciones en Ecuador. A partir de los datos y fotos de la visita, describe de forma preliminar: 1) posibles causas de cada daño; 2) un riesgo estimado (bajo, medio o alto) para el predio, con su justificación; 3) qué debe verificar el inspector en campo; 4) recomendaciones de seguimiento. Indica qué no puedes determinar solo con fotos. No es un diagnóstico estructural y no reemplaza la evaluación de un ingeniero. Responde en español, en texto simple, sin tablas.\n\nDatos de la visita:\n${JSON.stringify(contexto, null, 1)}`;
+  const content = [
+    ...fotosIA.map(f=>({type:'image', source:{type:'base64', media_type:'image/jpeg', data:f.dataUrl.split(',')[1]}})),
+    {type:'text', text: instruccion}
+  ];
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1000, messages:[{role:'user', content}]})});
+    const data = await r.json();
+    const texto = (data.content||[]).map(i=>i.text||'').join('\n').trim();
+    if(!texto) throw new Error('respuesta vacía');
+    TMP.analisis = {texto, fecha:hoy(), validado:false};
+    pintarAnalisis();
+  }catch(e){
+    show('No se pudo generar el análisis. Revisa la conexión e intenta de nuevo.');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Analizar con IA';
+  }
+}
+
+// ---------- Sistema de coordenadas y diagnóstico de columnas ----------
+// UTM (WGS84, hemisferio sur) a latitud y longitud. Verificado con Machala: -79.9595, -3.2610
+function utmAGeo(e, n, zona, sur){
+  const a=6378137, f=1/298.257223563, k0=0.9996;
+  const e2=f*(2-f), ep2=e2/(1-e2);
+  const x=e-500000, y=sur? n-10000000 : n;
+  const M=y/k0;
+  const mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2*e2*e2/256));
+  const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const phi1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+  const N1=a/Math.sqrt(1-e2*Math.sin(phi1)**2);
+  const T1=Math.tan(phi1)**2, C1=ep2*Math.cos(phi1)**2;
+  const R1=a*(1-e2)/Math.pow(1-e2*Math.sin(phi1)**2,1.5);
+  const D=x/(N1*k0);
+  const lat=phi1-(N1*Math.tan(phi1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+  const lon0=(zona*6-183)*Math.PI/180;
+  const lon=lon0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/Math.cos(phi1);
+  return [lon*180/Math.PI, lat*180/Math.PI];
+}
+function proyectarAGeo(fc, modo){
+  if(modo === 'geo') return fc;
+  const pts = (fc.features||[]).flatMap(f=>{
+    const g = f.geometry; if(!g) return [];
+    if(g.type==='Polygon') return g.coordinates.flat();
+    if(g.type==='MultiPolygon') return g.coordinates.flat(2);
+    return [];
+  });
+  const proyectadas = pts.slice(0,500).some(c=>Math.abs(c[0])>180 || Math.abs(c[1])>90);
+  if(modo !== 'utm17' && !proyectadas) return fc;
+  const conv = c => utmAGeo(c[0], c[1], 17, true);
+  fc.features.forEach(f=>{
+    const g = f.geometry; if(!g) return;
+    if(g.type==='Polygon') g.coordinates = g.coordinates.map(r=>r.map(conv));
+    else if(g.type==='MultiPolygon') g.coordinates = g.coordinates.map(pg=>pg.map(r=>r.map(conv)));
+  });
+  show('Coordenadas proyectadas (UTM 17 sur) convertidas a latitud y longitud.');
+  return fc;
+}
+function avisarColumnas(fc){
+  const disponibles = new Set((fc.features||[]).flatMap(f=>Object.keys(f.properties||{})));
+  const esenciales = {codigo:'código del predio', uso:'uso de edificación', direccion:'dirección'};
+  const faltan = Object.keys(esenciales).filter(k=>!MAPEO[k].some(n=>disponibles.has(n))).map(k=>`${esenciales[k]} (buscado como ${MAPEO[k].join(', ')})`);
+  if(faltan.length) show(`Columnas no encontradas en la capa: ${faltan.join('; ')}. Esos campos quedarán sin dato.`);
+}
+// ---------- Lista de verificación ----------
+function claveUso(uso){ const k=(uso||'').toUpperCase(); return CHECKLIST[k] ? k : 'OTRO'; }
+function listaVerif(uso){
+  const k = claveUso(uso);
+  return `<div class="chk-grid">${CHECKLIST[k].map(t=>`<label class="chk"><input type="checkbox" name="chk" value="${esc(t)}"> <span>${esc(t)}</span></label>`).join('')}</div>`;
+}
+
+// ---------- Borrador automático (se guarda mientras el inspector escribe) ----------
+const claveBorrador = codigo => 'iacat-borrador-' + codigo;
+function guardarBorrador(p){
+  const d = {campos:{}, radios:{}, checks:[], danos:TMP.danos||[], hora:horaAhora()};
+  document.querySelectorAll('#colCentro input[type=text],#colCentro input[type=number],#colCentro input[type=date],#colCentro select,#colCentro textarea')
+    .forEach(el=>{ if(el.id) d.campos[el.id] = el.value; });
+  document.querySelectorAll('#colCentro input[type=radio]:checked').forEach(el=>{ d.radios[el.name] = el.value; });
+  d.checks = [...document.querySelectorAll('input[name=chk]:checked')].map(x=>x.value);
+  try{
+    localStorage.setItem(claveBorrador(p.codigo), JSON.stringify(d));
+    const b = $('f-borr'); if(b) b.textContent = `Borrador guardado a las ${d.hora}. Las fotos no se guardan en el borrador.`;
+  }catch(e){}
+}
+function restaurarBorrador(p){
+  let d=null;
+  try{ d = JSON.parse(localStorage.getItem(claveBorrador(p.codigo))); }catch(e){}
+  if(!d) return;
+  if(d.danos) TMP.danos = d.danos;
+  Object.entries(d.campos||{}).forEach(([id,val])=>{ const el=$(id); if(el) el.value = val; });
+  Object.entries(d.radios||{}).forEach(([nm,val])=>{
+    const el = document.querySelector(`input[name="${nm}"][value="${val}"]`); if(el) el.checked = true;
+  });
+  (d.checks||[]).forEach(val=>{
+    const el = [...document.querySelectorAll('input[name=chk]')].find(x=>x.value===val); if(el) el.checked = true;
+  });
+  const b = $('f-borr'); if(b) b.textContent = `Se restauró un borrador guardado a las ${d.hora}.`;
+}
+
+// ---------- Línea de tiempo del predio ----------
+function timeline(p){
+  const ev = [];
+  (S.inspecciones[p.codigo]||[]).forEach(r=>ev.push({f:r.fecha, c:'VALIDADO',
+    t:`Inspección de ${r.tecnico}: estado ${r.valores.estado_conservacion||'—'}${r.discrepancias?'. Con discrepancia':''}`}));
+  S.actualizaciones.filter(a=>a.codigo===p.codigo).forEach(a=>ev.push({f:a.fecha_decision||a.fecha,
+    c: a.estado==='aprobada' ? 'VALIDADO' : (a.estado==='pendiente' ? 'SIN DATO' : 'FUENTE'),
+    t:`${ETIQ[a.campo]}: propuesta ${a.estado}${a.decidido_por?' por '+a.decidido_por:''}`}));
+  const asig = S.asignaciones[p.codigo];
+  if(asig) ev.push({f:asig.fecha, c:'FUENTE', t:`Visita asignada a ${asig.nombre} (plazo ${asig.plazo})`});
+  ev.sort((a,b)=>(b.f||'').localeCompare(a.f||''));
+  return `<div class="lab">Línea de tiempo</div>
+    ${ev.slice(0,12).map(x=>`<div class="row"><span class="k">${x.f||'—'} ${badge(x.c)}</span><span>${esc(x.t)}</span></div>`).join('') || '<p class="muted">Sin movimientos registrados.</p>'}`;
+}
+
+// ---------- Ficha de visita imprimible ----------
+function fichaVisitaHTML(p){
+  const e = evaluar(p);
+  const uso = valorVigente(p,'uso').valor, dir = valorVigente(p,'direccion').valor;
+  const F = (p.fuente||{}).frentes||{}, L = (p.fuente||{}).linderos||{};
+  const ult = (S.inspecciones[p.codigo]||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+  return `
+  <section class="pagina">
+    <div class="cab-inf"><span>${esc(S.institucion)} · IA-CAT · Ficha de visita</span><span>Fecha de impresión: ${hoy()}</span></div>
+    <h1>${esc(p.codigo)}</h1>
+    <div class="muted">${v(dir)}</div>
+    <div class="aviso-doc">${haySimulacion() ? 'DATOS DE PRUEBA: no son oficiales.' : 'Datos de '+esc(S.fuenteDatos)+'.'}</div>
+    <h3>Datos del catastro</h3>
+    ${tabla(['Campo','Valor','Origen'], CAMPOS.map(c=>{ const x=valorVigente(p,c); return [ETIQ[c], v(x.valor), x.origen]; }))}
+    <p>Frentes (m): N ${v(F.norte)} · S ${v(F.sur)} · E ${v(F.este)} · O ${v(F.oeste)}</p>
+    <p>Linderos: N ${v(L.norte)} · S ${v(L.sur)} · E ${v(L.este)} · O ${v(L.oeste)}</p>
+    <h3>Qué confirmar en campo</h3>
+    ${lista(e.validar.concat(e.brechas))}
+    <h3>Lista de verificación (uso ${esc(uso||'no registrado')})</h3>
+    ${CHECKLIST[claveUso(uso)].map(t=>`<p style="margin:4px 0">☐ ${esc(t)}</p>`).join('')}
+    <h3>Última visita</h3>
+    <p>${ult ? `${ult.fecha} · ${esc(ult.tecnico)}. ${esc(ult.observaciones||'')}` : 'Ninguna registrada.'}</p>
+    <h3>Observaciones de campo</h3>
+    <div style="border:1px solid #bbb;height:130px;border-radius:6px"></div>
+    <div class="firmas"><div>Técnico responsable</div><div>Recibido por supervisión</div></div>
+  </section>`;
+}
+function imprimirFichaVisita(p){
+  $('impVisita').innerHTML = fichaVisitaHTML(p);
+  window.print();
+}
+
+// ---------- Mi espacio de evidencia ----------
+const EVID_UI = {predio:'', cat:'todas', cmpPredio:'', cmpCat:'fachada', cmpA:'', cmpB:''};
+let EVID_CACHE = {meta:[], mapa:new Map()};
+const visitasDe = codigo => (S.inspecciones[codigo]||[]).slice().sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
+async function renderMiEspacio(){
+  const col = $('colCentro'); if(!col) return;
+  S.evidencia = S.evidencia || {};
+  const mis = Object.values(S.inspecciones).flat().filter(r=>r.inspector_id===USUARIO.id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const meta = mis.flatMap(r=>(r.fotos||[]).map(f=>({...f, codigo:r.codigo, fecha:r.fecha})));
+  const predios = [...new Set(mis.map(r=>r.codigo))];
+  const conDos = Object.keys(S.inspecciones).filter(c=>(S.inspecciones[c]||[]).length>=2).sort();
+  let mapa = new Map();
+  try{ mapa = new Map((await DB.todas()).map(f=>[f.id,f])); }catch(e){}
+  EVID_CACHE = {meta, mapa};
+
+  if(!EVID_UI.cmpPredio || !conDos.includes(EVID_UI.cmpPredio)) EVID_UI.cmpPredio = conDos[0] || '';
+  const vis = visitasDe(EVID_UI.cmpPredio);
+  if(!vis.some(x=>x.id===EVID_UI.cmpA)) EVID_UI.cmpA = vis[0] ? vis[0].id : '';
+  if(!vis.some(x=>x.id===EVID_UI.cmpB)) EVID_UI.cmpB = vis.length ? vis[vis.length-1].id : '';
+
+  const opcVisitas = id => vis.map(x=>`<option value="${x.id}" ${x.id===id?'selected':''}>${x.fecha} · ${esc(x.tecnico)}</option>`).join('');
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Mi espacio de evidencia</h1>
+      <div class="muted">Tus fotos de visita en un solo lugar. Elige cuáles van al informe, escribe su pie y compara visitas con el deslizador.</div></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--c:var(--teal)"><b>${mis.length}</b><span>Visitas enviadas</span></div>
+      <div class="kpi" style="--c:var(--navy)"><b>${meta.length}</b><span>Fotos guardadas</span></div>
+      <div class="kpi" style="--c:var(--blue)"><b>${predios.length}</b><span>Predios visitados</span></div>
+      <div class="kpi" style="--c:var(--amber)"><b>${Object.values(S.evidencia).flat().length}</b><span>Fotos elegidas para informes</span></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Comparador antes y después</h3>
+      ${conDos.length ? `
+        <div class="cmp-ctl">
+          <label class="campo">Predio<select id="cmp-p">${conDos.map(c=>`<option value="${esc(c)}" ${c===EVID_UI.cmpPredio?'selected':''}>${esc(c)}</option>`).join('')}</select></label>
+          <label class="campo">Categoría<select id="cmp-c">${CATEGORIAS.map(c=>`<option value="${c.id}" ${c.id===EVID_UI.cmpCat?'selected':''}>${c.t}</option>`).join('')}</select></label>
+          <label class="campo">Visita A<select id="cmp-a">${opcVisitas(EVID_UI.cmpA)}</select></label>
+          <label class="campo">Visita B<select id="cmp-b">${opcVisitas(EVID_UI.cmpB)}</select></label>
+        </div>
+        <div id="cmp-area"></div>` :
+        '<p class="muted">Necesitas al menos dos visitas de un mismo predio para comparar.</p>'}
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Galería</h3>
+      <div class="cmp-ctl">
+        <label class="campo">Predio<select id="g-p"><option value="">Todos mis predios</option>${predios.map(c=>`<option value="${esc(c)}" ${c===EVID_UI.predio?'selected':''}>${esc(c)}</option>`).join('')}</select></label>
+        <div class="chips" style="margin:0 0 6px" id="g-cats">
+          <span class="chip ${EVID_UI.cat==='todas'?'on':''}" data-gc="todas">Todas</span>
+          ${CATEGORIAS.map(c=>`<span class="chip ${EVID_UI.cat===c.id?'on':''}" data-gc="${c.id}">${c.t}</span>`).join('')}
+        </div>
+      </div>
+      <div class="galeria" id="galeria"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Elegidas para informes</h3>
+      <div id="evid-lista"></div>
+    </div>`;
+
+  if(conDos.length){
+    $('cmp-p').onchange = e=>{ EVID_UI.cmpPredio = e.target.value; EVID_UI.cmpA=''; EVID_UI.cmpB=''; renderMiEspacio(); };
+    $('cmp-c').onchange = e=>{ EVID_UI.cmpCat = e.target.value; renderMiEspacio(); };
+    $('cmp-a').onchange = e=>{ EVID_UI.cmpA = e.target.value; renderMiEspacio(); };
+    $('cmp-b').onchange = e=>{ EVID_UI.cmpB = e.target.value; renderMiEspacio(); };
+  }
+  $('g-p').onchange = e=>{ EVID_UI.predio = e.target.value; renderMiEspacio(); };
+  document.querySelectorAll('[data-gc]').forEach(c=>c.onclick=()=>{ EVID_UI.cat = c.dataset.gc; renderMiEspacio(); });
+  pintarGaleria();
+  pintarEvidencia();
+  if(conDos.length) pintarComparador();
+}
+
+function pintarGaleria(){
+  const g = $('galeria'); if(!g) return;
+  const {meta, mapa} = EVID_CACHE;
+  const items = meta.filter(f=>(!EVID_UI.predio || f.codigo===EVID_UI.predio) && (EVID_UI.cat==='todas' || f.categoria===EVID_UI.cat));
+  g.innerHTML = items.map(f=>{
+    const img = mapa.get(f.id);
+    const sel = (S.evidencia[f.codigo]||[]).find(x=>x.id===f.id);
+    return `<div class="gfoto ${sel?'sel':''}">
+      ${img ? `<img src="${img.dataUrl}" alt="${esc(f.nombre)}">` : '<div class="sinimg">Foto no disponible en este navegador</div>'}
+      <div class="gpie"><b>${esc(f.codigo)}</b> · ${esc(f.categoria)} · ${f.fecha}</div>
+      <div class="acc-row"><input type="text" class="pie-in" data-pie="${esc(f.id)}" data-c="${esc(f.codigo)}" value="${esc(sel?sel.pie:'')}" placeholder="Pie de foto para el informe" ${sel?'':'disabled'}></div>
+      <button class="btn mini ${sel?'no':'ok'}" data-tog="${esc(f.id)}" data-c="${esc(f.codigo)}" data-cat="${esc(f.categoria)}" data-f="${f.fecha}">${sel?'Quitar del informe':'Añadir al informe'}</button>
+    </div>`;
+  }).join('') || '<p class="muted">Aún no hay fotos con estos filtros.</p>';
+  g.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>toggleEvidencia(b.dataset.c, b.dataset.tog, b.dataset.cat, b.dataset.f));
+  g.querySelectorAll('[data-pie]').forEach(i=>i.onchange=()=>{
+    const it = (S.evidencia[i.dataset.c]||[]).find(x=>x.id===i.dataset.pie);
+    if(it){ it.pie = i.value.trim() || it.pie; guardar(); pintarEvidencia(); }
+  });
+}
+function toggleEvidencia(codigo, id, cat, fecha){
+  S.evidencia[codigo] = S.evidencia[codigo] || [];
+  const i = S.evidencia[codigo].findIndex(x=>x.id===id);
+  if(i>=0){
+    S.evidencia[codigo].splice(i,1);
+    if(!S.evidencia[codigo].length) delete S.evidencia[codigo];
+  } else {
+    S.evidencia[codigo].push({id, categoria:cat, fecha, pie:`${cat} · ${fecha}`});
+  }
+  guardar();
+  renderMiEspacio();
+}
+function pintarEvidencia(){
+  const box = $('evid-lista'); if(!box) return;
+  const grupos = Object.entries(S.evidencia).filter(([,a])=>a && a.length);
+  box.innerHTML = grupos.map(([c,a])=>`
+    <div class="row"><span class="k"><b>${esc(c)}</b> · ${a.length} foto(s) para el informe</span>
+      <span>${a.map(x=>`<span class="tagx">${esc(x.pie)}</span>`).join('')}</span></div>`).join('')
+    || '<p class="muted">Aún no has elegido fotos para ningún informe. Añádelas desde la galería.</p>';
+}
+async function pintarComparador(){
+  const area = $('cmp-area'); if(!area) return;
+  const A = visitasDe(EVID_UI.cmpPredio).find(x=>x.id===EVID_UI.cmpA);
+  const B = visitasDe(EVID_UI.cmpPredio).find(x=>x.id===EVID_UI.cmpB);
+  if(!A || !B || A.id===B.id){ area.innerHTML = '<p class="muted">Elige dos visitas distintas para comparar.</p>'; return; }
+  const fa = (A.fotos||[]).find(f=>f.categoria===EVID_UI.cmpCat);
+  const fb = (B.fotos||[]).find(f=>f.categoria===EVID_UI.cmpCat);
+  if(!fa || !fb){ area.innerHTML = `<p class="muted">Una de las visitas no tiene foto de esta categoría.</p>`; return; }
+  let ia=null, ib=null;
+  try{ ia = await DB.obtener(fa.id); ib = await DB.obtener(fb.id); }catch(e){}
+  if(!ia || !ib){ area.innerHTML = '<p class="muted">Las fotos de esas visitas no están guardadas en este navegador.</p>'; return; }
+  area.innerHTML = `
+    <div class="cmp">
+      <img src="${ib.dataUrl}" alt="Visita B">
+      <img id="cmp-img-a" src="${ia.dataUrl}" alt="Visita A" style="clip-path:inset(0 50% 0 0)">
+      <div class="cmp-line" id="cmp-line" style="left:50%"></div>
+      <span class="cmp-etq izq">A · ${A.fecha}</span>
+      <span class="cmp-etq der">B · ${B.fecha}</span>
+    </div>
+    <input type="range" min="0" max="100" value="50" id="cmp-r" style="width:100%;margin-top:8px">
+    <div class="muted">Arrastra el deslizador: a la izquierda ves la visita A y a la derecha la visita B.</div>`;
+  $('cmp-r').oninput = e=>{
+    const x = e.target.value;
+    $('cmp-img-a').style.clipPath = `inset(0 ${100-x}% 0 0)`;
+    $('cmp-line').style.left = x+'%';
+  };
+}
+
+// =====================================================================
+//  v0.6 · CARGA DE SHAPEFILE (ZIP), FUENTES CON VIGENCIA, DOCUMENTOS,
+//  AGREGAR PREDIOS/ZONAS A MANO Y SIMULACIÓN DE PRIORIDAD
+// =====================================================================
+const DRAW = {modo:false, tipo:'predio', puntos:[]};
+
+// Lee el índice del ZIP (directorio central) sin dependencias externas
+function listarZip(buf){
+  const v = new DataView(buf);
+  let eocd = -1;
+  for(let i=v.byteLength-22; i>=Math.max(0, v.byteLength-65557); i--){
+    if(v.getUint32(i,true) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error('El archivo no es un ZIP válido.');
+  const n = v.getUint16(eocd+10, true);
+  let off = v.getUint32(eocd+16, true);
+  const dec = new TextDecoder(), nombres = [];
+  for(let k=0; k<n; k++){
+    if(v.getUint32(off,true) !== 0x02014b50) break;
+    const len = v.getUint16(off+28,true), ext = v.getUint16(off+30,true), com = v.getUint16(off+32,true);
+    nombres.push(dec.decode(new Uint8Array(buf, off+46, len)).toLowerCase());
+    off += 46 + len + ext + com;
+  }
+  return nombres;
+}
+async function leerCapa(archivo){
+  if(!archivo.name.toLowerCase().endsWith('.zip')) return JSON.parse(await archivo.text());
+  const buf = await archivo.arrayBuffer();
+  const nombres = listarZip(buf);
+  const faltan = ['.shp','.shx','.dbf'].filter(ext=>!nombres.some(n=>n.endsWith(ext)));
+  if(faltan.length) throw new Error(`Faltan componentes del Shapefile: ${faltan.join(', ')}. Incluye .shp, .shx y .dbf (y .prj para el sistema de coordenadas).`);
+  if(!nombres.some(n=>n.endsWith('.prj'))) show('Aviso: el ZIP no trae .prj; se asume que las coordenadas son geográficas o metros.');
+  if(typeof shp === 'undefined') throw new Error('No se cargó la librería de Shapefile. Revisa la conexión a internet e intenta de nuevo.');
+  const geo = await shp(buf);
+  const colecciones = Array.isArray(geo) ? geo : [geo];
+  return {type:'FeatureCollection', features: colecciones.flatMap(c=>c.features||[])};
+}
+
+// Metadatos de la fuente (formulario de Datos)
+function leerMetaFuente(){
+  const g = id => { const el=$(id); return el ? el.value.trim() : ''; };
+  return {nombre:g('m-nombre'), institucion:g('m-inst'), fecha_corte:g('m-corte'), cobertura:g('m-cob'), limitaciones:g('m-lim')};
+}
+function registrarFuente(archivo, tipo, n){
+  const m = leerMetaFuente();
+  S.fuentes = S.fuentes || [];
+  S.fuentes.push({
+    id:'FTE-'+Date.now(), tipo,
+    nombre: m.nombre || archivo.name,
+    institucion: m.institucion || 'No indicada',
+    fecha_corte: m.fecha_corte || null,
+    fecha_actualizacion: m.fecha_corte || hoy(),
+    cobertura: m.cobertura || 'No indicada',
+    formato: archivo.name.toLowerCase().endsWith('.zip') ? 'Shapefile (ZIP)' : 'GeoJSON',
+    archivo: archivo.name,
+    limitaciones: m.limitaciones || 'No indicadas',
+    registros: n, registrada_por: USUARIO.nombre, fecha_registro: hoy()
+  });
+  registrar('registró fuente', '', `${m.nombre || archivo.name} (${n} registros)`);
+}
+
+// Vigencia: vigente / por vencer (80% del plazo) / desactualizada
+function vigenciaFuente(f){
+  if(!f.fecha_actualizacion) return {t:'Sin fecha', c:'SIN'};
+  const dias = (Date.now() - new Date(f.fecha_actualizacion+'T00:00:00'))/86400000;
+  const max = S.reglas.vigenciaDias || 365;
+  if(dias > max) return {t:'Desactualizada', c:'ALTA'};
+  if(dias > max*0.8) return {t:'Por vencer', c:'MEDIA'};
+  return {t:'Vigente', c:'BAJA'};
+}
+const vigenciaHTML = f => { const x = vigenciaFuente(f); return `<span class="tag ${x.c}">${x.t}</span>`; };
+
+// Fuentes de un predio: catastro, amenazas, documentos y datos de PDF
+function bloqueFuentes(p){
+  const fs = (S.fuentes||[]).filter(f=>f.tipo==='predios' || f.tipo==='amenaza');
+  const pdf = Object.entries((S.fuentesPDF||{})[p.codigo]||{});
+  const docs = (S.documentos||[]).filter(d=>d.codigo===p.codigo);
+  return `
+    <div class="lab">Fuentes de esta información</div>
+    ${fs.map(f=>`<div class="row"><span class="k">${f.tipo==='predios'?'Catastro':'Capa de amenaza'} ${vigenciaHTML(f)}</span>
+      <span><b>${esc(f.nombre)}</b> · ${esc(f.institucion)}<br>
+      <span class="muted">Corte: ${f.fecha_corte||'—'} · Actualización: ${f.fecha_actualizacion||'—'} · Cobertura: ${esc(f.cobertura)}<br>Limitaciones: ${esc(f.limitaciones)}</span></span></div>`).join('')
+      || '<p class="muted">Sin fuentes registradas. Regístralas al cargar datos.</p>'}
+    ${pdf.map(([campo,d])=>`<div class="row"><span class="k">${ETIQ[campo]||campo} ${badge('FUENTE')}</span><span>Documento: ${esc(d.ref)} · ${d.fecha}</span></div>`).join('')}
+    ${docs.length ? `<div class="row"><span class="k">Documentos adjuntos</span><span>${docs.map(d=>esc(d.nombre)).join(', ')}</span></div>` : ''}`;
+}
+
+// Simulación: qué cambiaría la prioridad si se completan las acciones posibles
+function accionPara(t){
+  if(/Intersecta/i.test(t)) return 'No depende de visitas: requiere revisar la capa de amenaza';
+  if(/Sin inspección/i.test(t)) return 'Registrar una visita de verificación';
+  if(/pendiente/i.test(t)) return 'Aprobar o rechazar la propuesta pendiente';
+  if(/malo/i.test(t)) return 'Nueva visita que confirme o descarte el estado';
+  if(/discrepancia/i.test(t)) return 'Corregir la discrepancia con una inspección';
+  if(/uso/i.test(t)) return 'Confirmar el uso en campo o con un documento';
+  if(/dirección/i.test(t)) return 'Confirmar la dirección en campo o con un documento';
+  if(/área/i.test(t)) return 'Revisar el área registrada frente a la geometría';
+  if(/construcción/i.test(t)) return 'Registrar pisos, material y tipo en una visita';
+  return 'Revisar en campo';
+}
+function bloqueSimulacion(p){
+  const e = evaluar(p);
+  const malo = !!(e.ult && e.ult.valores && e.ult.valores.estado_conservacion==='Malo' && S.reglas.maloEsAlta);
+  const filas = [
+    ...e.motivos.map(t=>({t, a:accionPara(t), fija:/Intersecta|malo|discrepancia/i.test(t)})),
+    ...e.brechas.map(t=>({t, a:accionPara(t), fija:false}))
+  ];
+  const quedan = filas.filter(f=>f.fija).length;
+  const hipotetica = (e.zonas.length || malo) ? 'ALTA' : (quedan ? 'MEDIA' : 'BAJA');
+  return `
+    <div class="lab">¿Qué cambiaría la prioridad?</div>
+    <div class="resumen">Prioridad actual: <b>${e.prioridad}</b>. Si se completan las acciones que dependen de visitas y documentos, quedaría en <b>${hipotetica}</b>. Es una simulación: no cambia ningún dato.</div>
+    ${filas.length ? tabla(['Factor','Cómo se resuelve','Efecto'],
+        filas.map(f=>[esc(f.t), esc(f.a), f.fija ? '<span class="tag ALTA">no depende de visitas</span>' : '<span class="tag BAJA">se resuelve</span>']))
+      : '<p class="muted">Ningún factor pendiente.</p>'}`;
+}
+
+// Documentos adjuntos (PDF o imagen) guardados en el navegador
+async function adjuntarDocumento(codigo, archivo, nombre){
+  const dataUrl = await new Promise((res,rej)=>{
+    const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(archivo);
+  });
+  const id = 'DOC-'+Date.now()+'-'+Math.floor(Math.random()*1000);
+  await DB.guardarDoc({id, codigo, nombre, tipo:archivo.type, dataUrl});
+  S.documentos = S.documentos || [];
+  S.documentos.push({id, codigo, nombre, tipo:archivo.type, tam:archivo.size, fecha:hoy(), subido_por:USUARIO.nombre});
+  registrar('adjuntó documento', codigo, nombre);
+}
+async function abrirDocumento(id){
+  let d = null;
+  try{ d = await DB.obtenerDoc(id); }catch(e){}
+  if(!d){ show('El documento no está en este navegador'); return; }
+  const a = document.createElement('a'); a.href = d.dataUrl; a.download = d.nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// Agregar predio o zona dibujándolos sobre el mapa
+function renderFormAgregar(){
+  const col = $('colLista'); if(!col) return;
+  DRAW.modo = true;
+  col.innerHTML = `
+    <div class="col-head"><b>Agregar información</b></div>
+    <div class="chips">
+      <span class="chip ${DRAW.tipo==='predio'?'on':''}" data-tipo="predio">Predio</span>
+      <span class="chip ${DRAW.tipo==='amenaza'?'on':''}" data-tipo="amenaza">Zona de amenaza</span>
+    </div>
+    <p class="muted">Haz clic en el mapa para marcar los vértices del polígono (mínimo 3). Arrastra para mover el mapa.</p>
+    <div class="resumen" id="a-estado"></div>
+    ${DRAW.tipo==='predio' ? `
+      <label class="campo">Código catastral *<input type="text" id="a-cod" placeholder="3-31-4-0-0-0"></label>
+      <label class="campo">Uso de edificación<select id="a-uso"><option></option><option>RESIDENCIAL</option><option>COMERCIAL</option><option>MIXTO</option><option>INDUSTRIAL</option><option>EQUIPAMIENTO</option></select></label>
+      <label class="campo">Dirección<input type="text" id="a-dir"></label>
+      <label class="campo">Área registrada (m²), si existe<input type="number" step="0.01" id="a-area"></label>
+      <label class="campo">Documento de respaldo (nombre)<input type="text" id="a-doc" placeholder="Ej.: escritura, plano"></label>`
+    : `
+      <label class="campo">Nombre de la amenaza *<input type="text" id="a-nom" placeholder="Ej.: Inundabilidad 2026"></label>
+      <label class="campo">Fuente<input type="text" id="a-fue"></label>`}
+    <div class="acc-row"><button class="btn sec mini" id="a-deshacer">Deshacer punto</button><button class="btn sec mini" id="a-limpiar">Limpiar</button></div>
+    <div class="acc-row"><button class="btn ok" id="a-guardar">Guardar</button></div>`;
+  col.querySelectorAll('[data-tipo]').forEach(c=>c.onclick=()=>{ DRAW.tipo=c.dataset.tipo; DRAW.puntos=[]; renderFormAgregar(); renderMapa(); });
+  $('a-deshacer').onclick = ()=>{ DRAW.puntos.pop(); renderMapa(); actualizarEstadoDraw(); };
+  $('a-limpiar').onclick = ()=>{ DRAW.puntos=[]; renderMapa(); actualizarEstadoDraw(); };
+  $('a-guardar').onclick = guardarDibujo;
+  actualizarEstadoDraw();
+}
+function actualizarEstadoDraw(){
+  const el = $('a-estado'); if(!el) return;
+  const n = DRAW.puntos.length;
+  el.innerHTML = `Vértices: <b>${n}</b>${n<3 ? ` · faltan ${3-n} para cerrar el polígono` : ' · listo para guardar'}`;
+}
+function agregarPunto(e){
+  if(!svgRef) return;
+  const pt = svgRef.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const q = pt.matrixTransform(svgRef.getScreenCTM().inverse());
+  DRAW.puntos.push([+q.x.toFixed(2), +(-q.y).toFixed(2)]);
+  renderMapa(); actualizarEstadoDraw();
+}
+function guardarDibujo(){
+  const n = DRAW.puntos.length;
+  if(n < 3){ show('Marca al menos 3 vértices'); return; }
+  if(DRAW.tipo === 'predio'){
+    const cod = $('a-cod').value.trim();
+    if(!cod){ show('Indica el código catastral'); return; }
+    if(S.predios.some(p=>p.codigo===cod)){ show('Ya existe un predio con ese código'); return; }
+    const area = parseFloat($('a-area').value);
+    S.predios.push({
+      codigo: cod, fid: null, origen: 'manual', registrado_por: USUARIO.nombre,
+      geometria: DRAW.puntos.slice(),
+      fuente: {uso: $('a-uso').value || null, direccion: $('a-dir').value.trim() || null, linderos:{}, frentes:{},
+               area_fuente: isNaN(area) ? null : area, perimetro_fuente: null, documento: $('a-doc').value.trim() || null}
+    });
+    registrar('agregó predio manual', cod, `${n} vértices`);
+    sel = cod;
+  } else {
+    const nom = $('a-nom').value.trim();
+    if(!nom){ show('Indica el nombre de la amenaza'); return; }
+    S.amenazas.push({id:'A'+(S.amenazas.length+1), nombre:nom, tipo:'amenaza',
+      fuente: $('a-fue').value.trim() || 'Registro manual', fecha: hoy(), geometria: DRAW.puntos.slice()});
+    registrar('agregó zona de amenaza', '', nom);
+  }
+  DRAW.puntos = []; VB = null; guardar(); vista = 'bandeja'; render();
+  show('Guardado. Ya aparece en el mapa.');
+}
+
+function fotoHTML(f){
+  const warn = f.calidad.avisos.length;
+  return `<div class="foto"><img src="${f.dataUrl}" alt="${esc(f.nombre)}">
+    <span class="q ${warn?'warn':'bien'}">${warn?'Revisar':'Correcta'}</span>
+    <button class="x" data-quitar="${f.id}" title="Quitar">×</button>
+    <div class="pie" title="${esc(f.nombre)}">${esc(f.nombre)}</div></div>`;
+}
+function mostrarValidacion(p, manual){
+  const box = $('f-val'); if(!box) return;
+  const r = validarTMP(p, TMP);
+  box.innerHTML = `
+    ${r.bloq.length ? `<div class="val bloq"><b>Faltan datos obligatorios</b>${lista(r.bloq)}</div>` : ''}
+    ${r.avis.length ? `<div class="val avis"><b>Observaciones para revisar</b>${lista(r.avis)}<span class="muted">Puedes enviar igual; quedarán marcadas para el supervisor.</span></div>` : ''}
+    ${r.bien.length && !r.bloq.length ? `<div class="val bien"><b>Listo para enviar</b>${lista(r.bien)}</div>` : ''}`;
+  if(manual && !r.bloq.length && !r.avis.length) show('Todo en orden');
+}
+async function guardarInspeccion(p){
+  const fecha = $('f-fecha').value, tec = $('f-tec').value.trim();
+  if(!fecha){ show('Indica la fecha de la visita'); return; }
+  if(!tec){ show('Indica el técnico responsable'); return; }
+  if(TMP.danos.some(d=>!d.tipo || !d.severidad)){ show('Completa tipo y severidad de cada daño registrado'); return; }
+  const iaTxt = $('f-ia-txt'); if(TMP.analisis && iaTxt) TMP.analisis.texto = iaTxt.value;
+  const analisisValido = !!(TMP.analisis && $('f-ia-val') && $('f-ia-val').checked);
+  const r = validarTMP(p, TMP);
+  if(r.bloq.length){ mostrarValidacion(p); show(r.bloq[0]); return; }
+  const verif = n => (document.querySelector(`input[name="${n}"]:checked`)||{}).value || null;
+  const ins = {
+    id:'INS-'+Date.now(), codigo:p.codigo, fecha, tecnico:tec, inspector_id:USUARIO.id, gps:TMP.gps,
+    verificaciones:{uso:verif('ver-uso'), direccion:verif('ver-dir')},
+    valores:{
+      uso:$('v-uso').value.trim()||null, direccion:$('v-dir').value.trim()||null,
+      pisos: $('v-pisos').value==='' ? null : Number($('v-pisos').value),
+      material:$('v-mat').value||null, tipo_construccion:$('v-tipo').value||null, estado_conservacion:$('v-estado').value||null, anio_construccion:$('v-anio').value ? Number($('v-anio').value) : null, estructura:$('v-estr').value||null
+    },
+    discrepancias:$('f-disc').value.trim(), observaciones:$('f-obs').value.trim(),
+    fotos: TMP.fotos.map(f=>({id:f.id, categoria:f.categoria, nombre:f.nombre, hash:f.hash, calidad:f.calidad})),
+    dist_m: r.dist, alerta_ubicacion: !!(r.dist!=null && r.dist > S.reglas.umbralGPS),
+    observaciones_calidad: r.avis,
+    checklist: [...document.querySelectorAll('input[name=chk]:checked')].map(x=>x.value),
+    danos: TMP.danos.map(d=>({...d, fotos:d.fotos.filter(id=>TMP.fotos.some(f=>f.id===id))})),
+    analisis_ia: analisisValido ? {texto:TMP.analisis.texto, fecha:TMP.analisis.fecha, validado:true} : null,
+    estado:'enviada'
+  };
+  try{ for(const f of TMP.fotos) await DB.guardar({...f, codigo:p.codigo, fecha}); }
+  catch(err){ show('No se pudieron guardar las fotos en este navegador'); return; }
+  S.inspecciones[p.codigo] = S.inspecciones[p.codigo] || [];
+  S.inspecciones[p.codigo].push(ins);
+  const n = proponer(ins);
+  notificar({tipo:'inspeccion', titulo:`Inspección enviada: ${p.codigo}`,
+    cuerpo:`${tec} · ${fecha} · ${n} propuesta(s) de actualización · ${ins.danos.length} daño(s) · ${ins.fotos.length} foto(s)${r.avis.length?` · ${r.avis.length} observación(es)`:''}.`,
+    codigo:p.codigo, roles:['supervisor']});
+  if(ins.alerta_ubicacion) notificar({tipo:'ubicacion', titulo:`Ubicación lejana en ${p.codigo}`,
+    cuerpo:`La visita quedó a ${r.dist} m del predio (umbral ${S.reglas.umbralGPS} m). Revisar.`, codigo:p.codigo, roles:['supervisor']});
+  registrar('envió inspección', p.codigo, `${n} propuesta(s), ${ins.fotos.length} foto(s)`);
+  TMP = {codigo:null, gps:null, fotos:[], danos:[], analisis:null};
+  localStorage.removeItem('iacat-borrador-'+p.codigo);
+  guardar();
+  show(`Inspección enviada. ${n} propuesta(s) pasan a supervisión.`);
+  render();
+}
+
+// =====================================================================
+//  MIS TAREAS (inspector)
+// =====================================================================
+function renderTareas(){
+  const col = $('colCentro');
+  const mias = Object.entries(S.asignaciones).filter(([,a])=>a.inspector===USUARIO.id);
+  const estado = (codigo,a)=>{
+    const ins = (S.inspecciones[codigo]||[]).filter(r=>r.fecha>=a.fecha).sort((x,y)=>y.fecha.localeCompare(x.fecha))[0];
+    if(ins) return {k:'hecha', t:`Enviada el ${ins.fecha}`};
+    if(a.plazo < hoy()) return {k:'venc', t:`Vencida (plazo ${a.plazo})`};
+    return {k:'pend', t:`Pendiente · plazo ${a.plazo}`};
+  };
+  const cuenta = {pend:0, venc:0, hecha:0};
+  mias.forEach(([c,a])=>cuenta[estado(c,a).k]++);
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Hola, ${esc(USUARIO.nombre.split(' ')[0])}</h1><div class="muted">Estas son las visitas que tienes asignadas.</div></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--c:var(--amber)"><b>${cuenta.pend}</b><span>Pendientes</span></div>
+      <div class="kpi" style="--c:var(--red)"><b>${cuenta.venc}</b><span>Con plazo vencido</span></div>
+      <div class="kpi" style="--c:var(--teal)"><b>${cuenta.hecha}</b><span>Enviadas</span></div>
+    </div>
+    ${mias.sort((a,b)=>a[1].plazo.localeCompare(b[1].plazo)).map(([c,a])=>{
+      const st = estado(c,a); const p = S.predios.find(x=>x.codigo===c); if(!p) return '';
+      const e = evaluar(p);
+      return `<div class="card ${st.k==='venc'?'rec':st.k==='hecha'?'apr':'pend'}">
+        <div class="cab-card"><div><b>${esc(c)}</b> <span class="tag ${e.prioridad}">${e.prioridad}</span><div class="muted" style="margin-top:4px">${v(valorVigente(p,'direccion').valor)}</div></div>
+        <div style="text-align:right"><div class="muted">${st.t}</div>
+        <button class="btn mini" data-insp="${esc(c)}">${st.k==='hecha'?'Ver o repetir':'Inspeccionar'}</button></div></div>
+        ${resumenDanosTexto(c)}
+        ${e.validar.length ? `<div class="muted" style="margin-top:8px">Qué revisar: ${e.validar.map(esc).join(' · ')}</div>` : ''}
+      </div>`;}).join('') || `<div class="empty"><b>Sin visitas asignadas</b>Cuando el supervisor te asigne predios, aparecerán aquí.</div>`}`;
+  col.querySelectorAll('[data-insp]').forEach(b=>b.onclick=()=>{ sel=b.dataset.insp; vista='inspeccion'; render(); });
+}
+
+// =====================================================================
+//  ASIGNACIONES (supervisor)
+// =====================================================================
+function renderAsignaciones(){
+  const col = $('colCentro');
+  const inspectores = USUARIOS.filter(u=>u.rol==='inspector');
+  const orden = S.predios.map(p=>({p,e:evaluar(p)})).sort((a,b)=>({ALTA:0,MEDIA:1,BAJA:2}[a.e.prioridad]-({ALTA:0,MEDIA:1,BAJA:2}[b.e.prioridad])));
+  const plazoDefault = sumarDias(S.reglas.plazoDias);
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Asignaciones de visita</h1><div class="muted">Asigna cada predio a un inspector con plazo. El inspector lo verá en "Mis tareas" y recibirá una notificación.</div></div></div>
+    <div class="lab">Predios (ordenados por prioridad)</div>
+    <table><tr><th>Predio</th><th>Prioridad</th><th>Asignado a</th><th>Plazo</th><th>Asignar</th></tr>
+      ${orden.slice(0,120).map(({p,e})=>{
+        const a = S.asignaciones[p.codigo];
+        return `<tr>
+          <td><b>${esc(p.codigo)}</b><div class="muted">${v(valorVigente(p,'direccion').valor)}</div></td>
+          <td><span class="tag ${e.prioridad}">${e.prioridad}</span></td>
+          <td>${a ? esc(a.nombre) : '<span class="muted">Sin asignar</span>'}</td>
+          <td>${a ? a.plazo : '—'}</td>
+          <td><div class="acc-row"><select data-ins="${esc(p.codigo)}" style="width:150px">${inspectores.map(u=>`<option value="${u.id}" ${a&&a.inspector===u.id?'selected':''}>${esc(u.nombre)}</option>`).join('')}</select>
+            <input type="date" data-plazo="${esc(p.codigo)}" value="${a?a.plazo:plazoDefault}" style="width:150px">
+            <button class="btn mini" data-asig="${esc(p.codigo)}">${a?'Reasignar':'Asignar'}</button></div></td></tr>`;}).join('')}
+    </table>`;
+  col.querySelectorAll('[data-asig]').forEach(b=>b.onclick=()=>{
+    if(!puede('asignar')){ show('Solo el supervisor asigna visitas'); return; }
+    const c = b.dataset.asig;
+    const uid = col.querySelector(`select[data-ins="${c}"]`).value;
+    const plazo = col.querySelector(`input[data-plazo="${c}"]`).value;
+    if(!plazo){ show('Indica el plazo'); return; }
+    const u = USUARIOS.find(x=>x.id===uid);
+    S.asignaciones[c] = {inspector:u.id, nombre:u.nombre, fecha:hoy(), plazo};
+    notificar({tipo:'asignacion', titulo:`Nueva visita asignada: ${c}`, cuerpo:`Plazo: ${plazo}. Revisa "Mis tareas".`, codigo:c, usuarios:[u.id]});
+    registrar('asignó visita', c, `${u.nombre}, plazo ${plazo}`);
+    guardar(); render(); show(`Asignado a ${u.nombre}`);
+  });
+}
+
+// =====================================================================
+//  ACTUALIZACIONES (supervisor)
+// =====================================================================
+function renderActualizaciones(){
+  const col = $('colCentro');
+  const lst = S.actualizaciones.filter(a=>a.estado===FILTRO_ACT).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const cnt = k => S.actualizaciones.filter(a=>a.estado===k).length;
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Actualizaciones propuestas</h1><div class="muted">Cada cambio viene de una inspección. Al aprobarlo queda como dato VALIDADO con quién lo decidió. Nada se borra.</div></div></div>
+    <div class="chips">${[['pendiente','Pendientes'],['aprobada','Aprobadas'],['rechazada','Rechazadas']].map(([k,t])=>`<span class="chip ${FILTRO_ACT===k?'on':''}" data-a="${k}">${t} (${cnt(k)})</span>`).join('')}</div>
+    ${lst.map(a=>`
+      <div class="card ${a.estado==='pendiente'?'pend':a.estado==='aprobada'?'apr':'rec'}">
+        <div class="cab-card"><span class="k muted">${esc(a.codigo)} · ${ETIQ[a.campo]} · ${a.fecha} · ${esc(a.tecnico)}</span></div>
+        <div style="margin:6px 0"><span class="muted">Antes:</span> ${v(a.anterior)} &nbsp;→&nbsp; <b>${esc(a.propuesto)}</b></div>
+        ${a.estado!=='pendiente' ? `<div class="muted">Decidido por ${esc(a.decidido_por)} el ${a.fecha_decision}${a.motivo?` · Motivo: ${esc(a.motivo)}`:''}</div>` : ''}
+        ${a.estado==='pendiente' ? `<div class="acc-row">
+          ${puede('aprobar') ? `<button class="btn ok mini" data-ok="${esc(a.id)}">Aprobar</button><button class="btn no mini" data-no="${esc(a.id)}">Rechazar</button>` : '<span class="muted">Pendiente de decisión del supervisor</span>'}
+          <button class="btn sec mini" data-ver="${esc(a.codigo)}">Ver predio</button></div>` : ''}
+      </div>`).join('') || '<div class="empty"><b>Nada en este estado</b>Cuando llegue una inspección aparecerán aquí sus propuestas.</div>'}`;
+  col.querySelectorAll('[data-a]').forEach(c=>c.onclick=()=>{ FILTRO_ACT=c.dataset.a; render(); });
+  col.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>decidir(b.dataset.ok,true));
+  col.querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>decidir(b.dataset.no,false));
+  col.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>{ sel=b.dataset.ver; vista='bandeja'; render(); });
+}
+
+// =====================================================================
+//  NOTIFICACIONES
+// =====================================================================
+function renderNotificaciones(){
+  const col = $('colCentro');
+  const todas = notisVisibles();
+  const lst = todas.filter(n=>filtroNoti==='todas' || !n.leidas.includes(USUARIO.id));
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Notificaciones</h1><div class="muted">Avisos generados por el sistema para tu rol. Las de este navegador se comparten solo al exportar o importar paquetes.</div></div>
+      <div class="acc-row"><button class="btn sec" id="n-todas">Marcar todas como leídas</button></div></div>
+    <div class="chips">
+      <span class="chip ${filtroNoti==='todas'?'on':''}" data-nf="todas">Todas (${todas.length})</span>
+      <span class="chip ${filtroNoti==='nuevas'?'on':''}" data-nf="nuevas">Sin leer (${noLeidas()})</span>
+    </div>
+    ${lst.map(n=>{
+      const leida = n.leidas.includes(USUARIO.id);
+      return `<div class="notif ${leida?'':'nueva'}">
+        <div class="ico ${n.tipo}">${ICONO_NOTI[n.tipo]||'i'}</div>
+        <div class="cuerpo"><b>${esc(n.titulo)}</b>${leida?'':' <span class="tag" style="background:#dff5ec;color:#16714f">nueva</span>'}
+          <div class="muted" style="margin-top:3px">${esc(n.cuerpo)}</div>
+          <div class="meta">${esc(n.fecha)} · ${esc(n.hora)}${n.codigo?` · ${esc(n.codigo)}`:''}</div></div>
+        <div class="acc-row">
+          ${n.codigo ? `<button class="btn sec mini" data-ver="${esc(n.codigo)}">Ver predio</button>` : ''}
+          ${leida ? '' : `<button class="btn mini" data-leer="${esc(n.id)}">Marcar leída</button>`}
+        </div></div>`;}).join('') || '<div class="empty"><b>Sin notificaciones</b>Aquí aparecerán los avisos de tu equipo.</div>'}`;
+  col.querySelectorAll('[data-nf]').forEach(c=>c.onclick=()=>{ filtroNoti=c.dataset.nf; render(); });
+  $('n-todas').onclick = ()=>{ marcarTodas(); render(); };
+  col.querySelectorAll('[data-leer]').forEach(b=>b.onclick=()=>{ marcarLeida(b.dataset.leer); render(); });
+  col.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>{ sel=b.dataset.ver; vista='bandeja'; render(); });
+}
+
+// =====================================================================
+//  ASISTENTE DE MENSAJES
+// =====================================================================
+function renderMensajes(){
+  const col = $('colCentro');
+  if(!MENSAJE.predio) MENSAJE.predio = sel;
+  const p = S.predios.find(x=>x.codigo===MENSAJE.predio) || S.predios[0];
+  if(!p){ col.innerHTML = '<div class="empty"><b>No hay predios para redactar</b>Carga o restaura los datos primero.</div>'; return; }
+  if(!MENSAJE.texto || MENSAJE.regen){ MENSAJE.texto = PLANTILLAS[MENSAJE.plantilla].cuerpo(p); MENSAJE.regen = false; }
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Asistente de mensajes</h1><div class="muted">Redacta avisos y resúmenes a partir de los datos del predio. Cada dato lleva su origen entre corchetes. Es redacción por plantilla: no inventa datos y puedes editar el texto.</div></div></div>
+    <div class="grid2">
+      <div>
+        <label class="campo">Predio<select id="m-pred">${S.predios.map(x=>`<option value="${esc(x.codigo)}" ${p && x.codigo===p.codigo?'selected':''}>${esc(x.codigo)}</option>`).join('')}</select></label>
+        <label class="campo">Plantilla<select id="m-plan">${Object.entries(PLANTILLAS).map(([k,pl])=>`<option value="${k}" ${MENSAJE.plantilla===k?'selected':''}>${pl.t}</option>`).join('')}</select></label>
+        <button class="btn sec" id="m-regen">Regenerar desde los datos</button>
+        <div class="nota">Los corchetes indican el origen: [FUENTE], [VALIDADO], [CALCULADO] o [SIN DATO]. Revisa el texto antes de enviarlo.</div>
+      </div>
+      <div>
+        <textarea id="m-texto" style="min-height:300px">${esc(MENSAJE.texto)}</textarea>
+        <div class="acc-row" style="margin-top:8px">
+          <button class="btn sec" id="m-copiar">Copiar</button>
+          <button class="btn" id="m-enviar">Enviar como notificación interna</button>
+        </div>
+        <div class="muted" style="margin-top:6px">Destino: ${esc((PLANTILLAS[MENSAJE.plantilla].para==='inspector' && p && S.asignaciones[p.codigo]) ? S.asignaciones[p.codigo].nombre : PLANTILLAS[MENSAJE.plantilla].para)}</div>
+      </div>
+    </div>`;
+  $('m-pred').onchange = e=>{ MENSAJE.predio = e.target.value; MENSAJE.texto=''; render(); };
+  $('m-plan').onchange = e=>{ MENSAJE.plantilla = e.target.value; MENSAJE.texto=''; render(); };
+  $('m-regen').onclick = ()=>{ MENSAJE.texto=''; render(); };
+  $('m-texto').oninput = e=>{ MENSAJE.texto = e.target.value; };
+  $('m-copiar').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText($('m-texto').value); show('Texto copiado'); }
+    catch(err){ $('m-texto').select(); document.execCommand('copy'); show('Texto copiado'); }
+  };
+  $('m-enviar').onclick = ()=>{
+    const pl = PLANTILLAS[MENSAJE.plantilla];
+    const a = S.asignaciones[p.codigo];
+    const usuarios = pl.para==='inspector' && a ? [a.inspector] : [];
+    const roles = pl.para==='inspector' && !a ? ['inspector'] : pl.para==='supervisor' ? ['supervisor'] : [];
+    if(pl.para==='ciudadano'){ show('Las respuestas ciudadanas se entregan fuera de la plataforma'); return; }
+    notificar({tipo:'sistema', titulo:`Mensaje: ${pl.t} · ${p.codigo}`, cuerpo: $('m-texto').value.slice(0,400), codigo:p.codigo, roles, usuarios});
+    registrar('envió mensaje', p.codigo, pl.t);
+    guardar(); show('Mensaje enviado a notificaciones');
+  };
+}
+
+// =====================================================================
+//  PANEL Y ANÁLISIS
+// =====================================================================
+function renderPanel(){
+  const col = $('colCentro');
+  const ev = S.predios.map(p=>({p,e:evaluar(p)}));
+  const n = ev.length || 1;
+  const cnt = {ALTA:0,MEDIA:0,BAJA:0}; ev.forEach(x=>cnt[x.e.prioridad]++);
+  const conBrecha = ev.filter(x=>x.e.brechas.length).length;
+  const sinInsp = ev.filter(x=>!vigente(x.p.codigo)).length;
+  const pend = S.actualizaciones.filter(a=>a.estado==='pendiente').length;
+  const todasIns = Object.values(S.inspecciones).flat();
+  const fotos = todasIns.flatMap(r=>r.fotos||[]);
+  const fotosAviso = fotos.filter(f=>f.calidad && f.calidad.avisos.length).length;
+  const discr = todasIns.filter(r=>r.discrepancias).length;
+  const asignados = Object.keys(S.asignaciones).length;
+  // Tendencia de inspecciones: últimos 12 meses
+  const meses = [];
+  for(let i=11;i>=0;i--){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i); meses.push({k:d.toISOString().slice(0,7), t:d.toLocaleDateString('es-EC',{month:'short'})}); }
+  const porMes = meses.map(mm=>({...mm, c: todasIns.filter(r=>r.fecha.slice(0,7)===mm.k).length}));
+  const maxM = Math.max(1, ...porMes.map(x=>x.c));
+  // Zonas
+  const zonas = {};
+  ev.forEach(({p,e})=>{ const z=zonaDe(p.codigo); zonas[z]=zonas[z]||{n:0,alta:0,ins:0,disc:0}; zonas[z].n++; if(e.prioridad==='ALTA') zonas[z].alta++; });
+  todasIns.forEach(r=>{ const z=zonaDe(r.codigo); zonas[z]=zonas[z]||{n:0,alta:0,ins:0,disc:0}; zonas[z].ins++; if(r.discrepancias) zonas[z].disc++; });
+  const filasZona = Object.entries(zonas).sort((a,b)=>b[1].alta-a[1].alta).slice(0,12).map(([z,d])=>[
+    `<b>${esc(z)}</b>`, d.n, d.alta, d.ins, d.disc ? `${d.disc} (${Math.round(d.disc/Math.max(1,d.ins)*100)}%)` : '0'
+  ]);
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Panel y análisis</h1><div class="muted">Indicadores calculados con las reglas vigentes. El análisis de fotos es un control de calidad sencillo; no reconoce contenido.</div></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--c:var(--navy)"><b>${S.predios.length}</b><span>Predios</span></div>
+      <div class="kpi" style="--c:var(--red)"><b>${cnt.ALTA}</b><span>Prioridad alta</span></div>
+      <div class="kpi" style="--c:var(--amber)"><b>${conBrecha}</b><span>Con brechas de información</span></div>
+      <div class="kpi" style="--c:var(--amber)"><b>${sinInsp}</b><span>Sin inspección vigente</span></div>
+      <div class="kpi" style="--c:var(--blue)"><b>${pend}</b><span>Actualizaciones pendientes</span></div>
+      <div class="kpi" style="--c:var(--teal)"><b>${asignados}</b><span>Visitas asignadas</span></div>
+      <div class="kpi" style="--c:var(--teal)"><b>${todasIns.length}</b><span>Inspecciones registradas</span></div>
+      <div class="kpi" style="--c:var(--amber)"><b>${fotosAviso}</b><span>Fotos con aviso de calidad (de ${fotos.length})</span></div>
+    </div>
+    <div class="grid2" style="grid-template-columns:1fr 1fr">
+      <div class="card"><h3 style="margin-top:0">Inspecciones por mes (12 meses)</h3>
+        <div class="bars">${porMes.map(x=>`<div><b>${x.c||''}</b><i style="height:${Math.round(x.c/maxM*100)}%"></i><span>${x.t}</span></div>`).join('')}</div></div>
+      <div class="card"><h3 style="margin-top:0">Distribución por prioridad</h3>
+        ${[['ALTA','#d24b45'],['MEDIA','#d89b18'],['BAJA','#139b91']].map(([k,c])=>`<div class="muted">${k}: ${cnt[k]} (${(n ? Math.round(cnt[k]/n*100) : 0)}%)</div><div class="barra"><i style="width:${(n ? Math.round(cnt[k]/n*100) : 0)}%;background:${c}"></i></div>`).join('')}
+        <h3>Datos que faltan (predios sin valor vigente)</h3>
+        ${tabla(['Campo','Predios sin dato','%'], CAMPOS.map(c=>{ const k=ev.filter(x=>valorVigente(x.p,c).valor==null).length; return [ETIQ[c], k, (n ? Math.round(k/n*100) : 0)+'%']; }))}
+      </div>
+    </div>
+    <h3>Zonas (código catastral, primeros dos tramos)</h3>
+    ${tabla(['Zona','Predios','Alta','Inspecciones','Con discrepancia'], filasZona)}
+    <div class="resumen">Discrepancias registradas en inspecciones: <b>${discr}</b> de ${todasIns.length}. Las zonas se agrupan por los dos primeros tramos del código; cuando tengas la clasificación oficial de sectores, la reemplazamos.</div>`;
+}
+
+// =====================================================================
+//  ALERTAS Y REGLAS
+// =====================================================================
+function renderAlertas(){
+  const col = $('colCentro');
+  const items = [];
+  S.predios.forEach(p=>{
+    const e = evaluar(p);
+    if(e.zonas.length) items.push({n:1, nivel:'ALTA', codigo:p.codigo, texto:`Dentro de una zona de amenaza: ${esc(e.zonas[0].nombre)}`});
+    if(e.ult && e.ult.valores.estado_conservacion==='Malo') items.push({n:1, nivel:'ALTA', codigo:p.codigo, texto:`Última inspección con estado malo (${e.ult.fecha}).`});
+    if(e.pend.length) items.push({n:2, nivel:'MEDIA', codigo:p.codigo, texto:`${e.pend.length} actualización(es) pendiente(s).`});
+    if(e.brechas.length) items.push({n:3, nivel:'MEDIA', codigo:p.codigo, texto:`Información incompleta: ${esc(e.brechas[0])}`});
+    if(!vigente(p.codigo)) items.push({n:4, nivel:'MEDIA', codigo:p.codigo, texto:`Sin inspección en los últimos ${S.reglas.diasInspeccion} días.`});
+    if(e.ult && e.ult.alerta_ubicacion) items.push({n:2, nivel:'MEDIA', codigo:p.codigo, texto:`La última visita quedó a ${e.ult.dist_m} m del predio.`});
+  });
+  items.sort((a,b)=>a.n-b.n);
+  const r = S.reglas;
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Alertas y reglas</h1><div class="muted">Las alertas salen de las reglas de abajo. Cambia un umbral y el efecto es inmediato.</div></div></div>
+    <div class="card">
+      <h3 style="margin-top:0">Reglas</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+        <label class="campo">Días máximos sin inspección<input type="number" id="r-dias" min="30" max="3650" value="${r.diasInspeccion}" ${puede('reglas')?'':'disabled'}></label>
+        <label class="campo">Diferencia de área considerada brecha (%)<input type="number" id="r-area" min="0" max="100" value="${Math.round(r.umbralArea*100)}" ${puede('reglas')?'':'disabled'}></label>
+        <label class="campo">Distancia máxima visita–predio (m)<input type="number" id="r-gps" min="5" max="5000" value="${r.umbralGPS}" ${puede('reglas')?'':'disabled'}></label>
+        <label class="campo">Antigüedad máxima de una fuente (días)<input type="number" id="r-vig" min="30" max="3650" value="${S.reglas.vigenciaDias||365}" ${puede('reglas')?'':'disabled'}></label>
+        <label class="campo">Plazo por defecto de visita (días)<input type="number" id="r-plazo" min="1" max="365" value="${r.plazoDias}" ${puede('reglas')?'':'disabled'}></label>
+      </div>
+      <label class="campo"><input type="checkbox" id="r-malo" ${r.maloEsAlta?'checked':''} ${puede('reglas')?'':'disabled'}> El estado de conservación malo cuenta como prioridad alta</label>
+      ${puede('reglas') ? '<button class="btn" id="r-guardar">Guardar reglas</button>' : '<p class="muted">Solo el supervisor puede cambiar las reglas.</p>'}
+    </div>
+    <h3>Alertas activas (${items.length})</h3>
+    ${items.map(a=>`<div class="card ${a.nivel==='ALTA'?'alta':'media'}" data-id="${esc(a.codigo)}" style="cursor:pointer">
+      <div class="cab-card"><b>${esc(a.codigo)}</b><span class="tag ${a.nivel}">${a.nivel}</span></div>
+      <div class="muted" style="margin-top:4px">${a.texto}</div></div>`).join('') || '<div class="empty"><b>Sin alertas</b>Con las reglas actuales no hay nada que atender.</div>'}`;
+  const g = $('r-guardar');
+  if(g) g.onclick = ()=>{
+    const d=parseInt($('r-dias').value,10), a=parseFloat($('r-area').value), gps=parseFloat($('r-gps').value), pl=parseInt($('r-plazo').value,10);
+    if(!(d>=30) || isNaN(a) || !(gps>=5) || !(pl>=1)){ show('Revisa los valores de las reglas'); return; }
+    S.reglas = {diasInspeccion:d, umbralArea:a/100, maloEsAlta:$('r-malo').checked, umbralGPS:gps, plazoDias:pl, vigenciaDias: parseInt($('r-vig').value,10) || 365};
+    registrar('cambió reglas', '', `días ${d}, área ${a}%, GPS ${gps} m, plazo ${pl}`);
+    guardar(); render(); show('Reglas guardadas');
+  };
+  col.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{ sel=el.dataset.id; vista='bandeja'; render(); });
+}
+
+// =====================================================================
+//  INFORMES PDF
+// =====================================================================
+const OPC = {modo:'uno', historial:true, inspecciones:true, actas:true, fotos:true};
+function objetivosInforme(){
+  return OPC.modo==='uno' ? S.predios.filter(p=>p.codigo===sel) : visibles().map(x=>x.p);
+}
+function renderInforme(){
+  const col = $('colCentro');
+  const objetivos = objetivosInforme();
+  col.innerHTML = `
+    <div class="no-print">
+      <div class="cab-card"><div><h1>Informes PDF</h1><div class="muted">Elige qué incluir, revisa la vista previa y usa "Imprimir / Guardar como PDF".</div></div></div>
+      <div class="grid2" style="grid-template-columns:1fr 1fr">
+        <div>
+          <label class="campo"><input type="radio" name="modo" value="uno" ${OPC.modo==='uno'?'checked':''}> Solo el predio seleccionado (${esc(sel||'ninguno')})</label>
+          <label class="campo"><input type="radio" name="modo" value="lista" ${OPC.modo==='lista'?'checked':''}> Todos los predios visibles (${visibles().length}), una página por predio</label>
+        </div>
+        <div>
+          <label class="campo"><input type="checkbox" id="o-hist" ${OPC.historial?'checked':''}> Historial de actualizaciones</label>
+          <label class="campo"><input type="checkbox" id="o-ins" ${OPC.inspecciones?'checked':''}> Inspecciones registradas</label>
+          <label class="campo"><input type="checkbox" id="o-fotos" ${OPC.fotos?'checked':''}> Fotografías de la última inspección</label>
+          <label class="campo"><input type="checkbox" id="o-actas" ${OPC.actas?'checked':''}> Acta de actualizaciones aprobadas al final</label>
+        </div>
+      </div>
+      <div class="acc-row"><button class="btn sec" id="o-vista">Actualizar vista previa</button><button class="btn" onclick="window.print()">Imprimir / Guardar como PDF</button></div>
+    </div>
+    ${objetivos.length ? `<div id="informe">${objetivos.map(paginaPredio).join('')}${OPC.actas ? paginaActa(objetivos.map(p=>p.codigo)) : ''}</div>`
+      : '<div class="empty"><b>Nada que incluir</b>Selecciona un predio o ajusta los filtros.</div>'}`;
+  $('o-vista').onclick = ()=>{
+    OPC.modo = document.querySelector('input[name=modo]:checked').value;
+    OPC.historial = $('o-hist').checked; OPC.inspecciones = $('o-ins').checked;
+    OPC.fotos = $('o-fotos').checked; OPC.actas = $('o-actas').checked;
+    render();
+  };
+}
+function paginaPredio(p){
+  const e = evaluar(p);
+  const filas = CAMPOS.map(c=>{ const x=valorVigente(p,c); return [ETIQ[c], v(x.valor), x.origen, esc(x.ref)]; });
+  filas.push(['Área del archivo', m((p.fuente||{}).area_fuente), 'FUENTE', 'Catastro']);
+  filas.push(['Área de la geometría', m(e.areaCalc), 'CALCULADO', 'Cálculo con geometría']);
+  const insp = (S.inspecciones[p.codigo]||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const hist = S.actualizaciones.filter(a=>a.codigo===p.codigo).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const ultima = insp[0];
+  const evid = (S.evidencia||{})[p.codigo] || [];
+  const fotosUlt = OPC.fotos ? (evid.length ? evid.map(x=>({id:x.id, categoria:x.pie})) : (ultima ? (ultima.fotos||[]) : [])) : [];
+  return `
+  <section class="pagina">
+    <div class="cab-inf"><span>${esc(S.institucion)} · IA-CAT · Informe territorial preliminar</span><span>Emitido el ${new Date().toLocaleDateString('es-EC')}</span></div>
+    <h1>${esc(p.codigo)}</h1>
+    <div class="muted">${v(valorVigente(p,'direccion').valor)}</div>
+    <div class="aviso-doc">${haySimulacion() ? 'DATOS DE PRUEBA: no son oficiales.' : 'Datos cargados desde '+esc(S.fuenteDatos)+'. Verificar procedencia antes de usar.'}</div>
+    <h3>1. Prioridad de revisión</h3>
+    <p><b>Nivel: ${e.prioridad}.</b> Orienta la inspección. La define y aprueba el técnico responsable; no es un diagnóstico de riesgo.</p>
+    ${lista(e.motivos.map(esc))}
+    <h3>2. Datos vigentes y su origen</h3>
+    ${tabla(['Campo','Valor','Origen','Referencia'], filas)}
+    <h3>3. Brechas y validación en campo</h3>
+    <p><b>Brechas de información</b></p>${lista(e.brechas)}
+    <p><b>Requiere validación en campo</b></p>${lista(e.validar)}
+    ${estadoPredio(ultima, p)}
+    ${OPC.inspecciones ? `<h3>Inspecciones registradas [VALIDADO]</h3>
+      ${insp.length ? tabla(['Fecha','Técnico','Estado','Discrepancias','Ubicación / observaciones'], insp.map(r=>[r.fecha, esc(r.tecnico), esc(r.valores.estado_conservacion||'—'), esc(r.discrepancias||'—'), `${r.dist_m!=null?`A ${r.dist_m} m. `:''}${esc(r.observaciones||'—')}`])) : '<p class="muted">Ninguna registrada.</p>'}` : ''}
+    ${OPC.fotos && fotosUlt.length ? `<h3>${evid.length ? 'Evidencia fotográfica seleccionada' : 'Fotografías de la última inspección ('+(ultima?ultima.fecha:'')+')'}</h3>
+      <div class="fotos-inf">${fotosUlt.map(f=>`<div><img data-foto="${esc(f.id)}" alt="${esc(f.nombre)}" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><span>${esc(f.categoria)}</span></div>`).join('')}</div>` : ''}
+    ${OPC.historial ? `<h3>Historial de actualizaciones</h3>
+      ${tabla(['Campo','Anterior','Propuesto','Estado','Decisión'], hist.map(a=>[ETIQ[a.campo], v(a.anterior), esc(a.propuesto), a.estado, a.decidido_por ? `${esc(a.decidido_por)} · ${a.fecha_decision}${a.motivo?' · '+esc(a.motivo):''}` : '—']))}` : ''}
+    <h3>Nota metodológica</h3>
+    <p class="muted">FUENTE: viene del catastro o de un documento registrado. CALCULADO: obtenido con código a partir de la geometría. IA: análisis preliminar generado por modelo, incluido solo si el técnico lo validó. Severidad de daños: registrada por el inspector en campo. VALIDADO: aprobado por técnico o supervisor. SIN DATO: no existe en la fuente. La IA no modifica datos oficiales.</p>
+    <div class="firmas"><div>Técnico responsable</div><div>Supervisor que aprueba</div></div>
+  </section>`;
+}
+function estadoPredio(ins, p){
+  if(!ins) return `<h3>4. Estado actual y daños observados</h3><p class="muted">Sin inspección registrada: el estado actual del predio no se conoce todavía.</p>`;
+  const danos = ins.danos || [];
+  let html = `<h3>4. Estado actual y daños observados</h3>
+    <p>Última inspección: <b>${ins.fecha}</b>. Estado de conservación registrado: <b>${esc(ins.valores.estado_conservacion||'—')}</b>${danos.length ? `. Daños registrados: <b>${danos.length}</b>, severidad máxima <b>${sevMaxima(danos)}</b>.` : '. Sin daños registrados.'}</p>`;
+  if(danos.length){
+    html += tabla(['Tipo','Ubicación','Severidad','Extensión','Descripción'],
+      danos.map(d=>[esc(d.tipo), esc(d.ubicacion||'—'), `<span class="tag ${SEV_TAG[d.severidad]||''}">${esc(d.severidad)}</span>`, esc(d.extension||'—'), esc(d.descripcion||'—')]));
+    const fotosDanos = danos.flatMap(d=>d.fotos.map(id=>(ins.fotos||[]).find(f=>f.id===id)).filter(Boolean));
+    if(fotosDanos.length) html += `<div class="fotos-inf">${fotosDanos.map(f=>`<div><img data-foto="${esc(f.id)}" alt="${esc(f.nombre)}" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><span>${esc(f.nombre)}</span></div>`).join('')}</div>`;
+  }
+  if(ins.analisis_ia && ins.analisis_ia.validado)
+    html += `<p><span class="badge IA">Análisis con IA · validado por el técnico</span></p><div class="msg">${esc(ins.analisis_ia.texto)}</div>`;
+  return html;
+}
+function paginaActa(codigos){
+  const aprob = S.actualizaciones.filter(a=>a.estado==='aprobada' && codigos.includes(a.codigo)).sort((a,b)=>(a.fecha_decision||'').localeCompare(b.fecha_decision||''));
+  return `
+  <section class="pagina">
+    <div class="cab-inf"><span>${esc(S.institucion)} · Acta de actualizaciones aprobadas</span><span>Emitida el ${new Date().toLocaleDateString('es-EC')}</span></div>
+    <h1>Acta de actualizaciones</h1>
+    <p class="muted">Cambios aprobados por supervisión para los predios de este informe. Cada uno conserva el valor anterior, quién lo propuso y quién lo aprobó.</p>
+    ${tabla(['Fecha','Predio','Campo','Anterior','Nuevo valor','Técnico','Aprobó'], aprob.map(a=>[a.fecha_decision, esc(a.codigo), ETIQ[a.campo], v(a.anterior), esc(a.propuesto), esc(a.tecnico), esc(a.decidido_por)]))}
+    <div class="firmas"><div>Supervisor</div><div>Responsable del área</div></div>
+  </section>`;
+}
+async function completarFotosInforme(){
+  const imgs = document.querySelectorAll('img[data-foto]');
+  if(!imgs.length) return;
+  let todas = [];
+  try{ todas = await DB.todas(); }catch(e){ return; }
+  imgs.forEach(img=>{ const f = todas.find(x=>x.id===img.dataset.foto); if(f) img.src = f.dataUrl; });
+}
+
+// =====================================================================
+//  AUDITORÍA
+// =====================================================================
+function renderAuditoria(){
+  const col = $('colCentro');
+  if(!puedeVista('auditoria')){ col.innerHTML='<div class="empty"><b>Sin acceso</b></div>'; return; }
+  const q = filtroAud.trim().toLowerCase();
+  const filas = S.auditoria.filter(a=>!q || `${a.usuario} ${a.accion} ${a.codigo} ${a.detalle}`.toLowerCase().includes(q)).slice(0,300);
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Auditoría</h1><div class="muted">Registro de quién hizo qué y cuándo. No se borra. Muestra las últimas 300 entradas.</div></div></div>
+    <input type="text" id="aud-q" placeholder="Buscar por usuario, acción, predio…" value="${esc(filtroAud)}">
+    <div style="margin-top:10px">${tabla(['Fecha','Hora','Usuario','Rol','Acción','Predio','Detalle'],
+      filas.map(a=>[a.fecha, a.hora, esc(a.usuario), esc(a.rol), esc(a.accion), esc(a.codigo||'—'), esc(a.detalle||'—')]))}</div>`;
+  $('aud-q').oninput = e=>{ filtroAud = e.target.value; renderAuditoria(); };
+}
+
+// =====================================================================
+//  DATOS E IMPORTACIÓN
+// =====================================================================
+function renderDatos(){
+  const col = $('colCentro');
+  const n = S.predios.length;
+  const pueImp = puede('importar'), pueExp = puede('exportar'), puePDF = puede('fuentePDF');
+  const restringido = msg => `<p class="muted">${msg}</p>`;
+  const fuentesRecientes = [];
+  Object.entries(S.fuentesPDF).forEach(([c,campos])=>Object.entries(campos).forEach(([k,d])=>fuentesRecientes.push([c,ETIQ[k]||k,v(d.valor),esc(d.ref),d.fecha])));
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Datos e importación</h1>
+      <div class="muted">Fuente actual: <b>${esc(etiquetaFuente())}</b> · ${n} predios · ${S.amenazas.length} zona(s) de amenaza · ${Object.values(S.inspecciones).flat().length} inspecciones · ${S.actualizaciones.length} propuestas.</div></div></div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Fuentes reales disponibles</h3>
+      ${tabla(['Fuente','Dato','Valor'], [
+        ['Supabase · tabla predios','Registros','607.908'],
+        ['Supabase · tabla predios','Identificador id (entero)','607.908 distintos, sin nulos'],
+        ['Supabase · tabla predios','Código catastral','600.156 distintos; 8 sin código; hay repetidos, no es clave única'],
+        ['Supabase · tabla manzanas','Polígonos','30.177'],
+        ['Supabase · funciones RPC','Consulta por zona visible','predios_en_extension y manzanas_en_extension (solo lectura)']
+      ])}
+      <p class="muted"><b>Cifras informativas</b>: tomadas de consultas previas de solo lectura en Supabase. No han sido verificadas desde IA-CAT. El mapa en vivo sí consulta Supabase en cada visita.</p>
+      <h3>Sin registros reales disponibles</h3>
+      <p class="muted">Inspecciones de campo, zonas de amenaza, prioridades, asignaciones y notificaciones: todavía no hay una fuente real conectada. Se muestran como «Sin registros disponibles».</p>
+    </div>
+
+    ${haySimulacion() && pueImp ? `<div class="card"><h3 style="margin-top:0">Quitar datos de simulación</h3>
+      <p class="muted">Borra solo los predios, inspecciones, zonas y asignaciones marcados como simulación. Los registros creados a mano se conservan. Los datos de Supabase no se modifican.</p>
+      <button class="btn no" id="d-quitar-sim">Quitar simulación</button></div>` : ''}
+
+    <div class="grid2" style="grid-template-columns:1fr 1fr">
+      <div class="card">
+        <h3 style="margin-top:0">Institución</h3>
+        <label class="campo">Nombre que aparece en los informes<input type="text" id="d-inst" value="${esc(S.institucion)}" ${pueImp?'':'disabled'}></label>
+        ${pueImp ? '<button class="btn sec" id="d-inst-g">Guardar</button>' : restringido('Solo el supervisor cambia este dato.')}
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Cargar información territorial</h3>
+        <p class="muted">Sube un <b>ZIP</b> con el Shapefile completo (.shp, .shx, .dbf y .prj) o un GeoJSON. Antes de cargar, describe la fuente: queda registrada con su vigencia.</p>
+        <label class="campo">Sistema de coordenadas de la capa
+          <select id="d-sis">
+            <option value="auto">Automático (detecta coordenadas proyectadas)</option>
+            <option value="utm17">UTM 17 sur (Guayaquil, El Oro y zona sur del Ecuador)</option>
+            <option value="geo">Geográficas (latitud y longitud)</option>
+          </select></label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+          <label class="campo">Nombre de la fuente<input type="text" id="m-nombre" placeholder="Ej.: Catastro urbano 2026"></label>
+          <label class="campo">Institución<input type="text" id="m-inst" placeholder="Ej.: Municipio de Guayaquil"></label>
+          <label class="campo">Fecha de corte o actualización<input type="date" id="m-corte"></label>
+          <label class="campo">Cobertura<input type="text" id="m-cob" placeholder="Ej.: zona urbana"></label>
+          <label class="campo">Limitaciones conocidas<input type="text" id="m-lim"></label>
+        </div>
+        ${pueImp ? `<label class="btnfile">Cargar predios (ZIP o GeoJSON)<input type="file" id="d-predios" accept=".zip,.geojson,.json"></label>
+          <label class="btnfile">Cargar zonas de amenaza (ZIP o GeoJSON)<input type="file" id="d-amen" accept=".zip,.geojson,.json"></label>` : restringido('Solo el supervisor carga capas.')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Registrar un dato desde un PDF</h3>
+      <p class="muted">Mientras llega la extracción automática, un técnico registra aquí el dato tal como aparece en el PDF, con su referencia. Queda como FUENTE con la página de origen y puede corregirse con una actualización.</p>
+      ${puePDF ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+        <label class="campo">Código del predio<input type="text" id="p-cod" placeholder="3-31-4-0-0-0"></label>
+        <label class="campo">Campo<select id="p-campo">${CAMPOS.map(c=>`<option value="${c}">${ETIQ[c]}</option>`).join('')}</select></label>
+        <label class="campo">Valor<input type="text" id="p-val"></label>
+        <label class="campo">Documento PDF<input type="text" id="p-doc" placeholder="Nombre del archivo"></label>
+        <label class="campo">Página<input type="number" min="1" id="p-pag"></label>
+      </div>
+      <label class="campo">Adjuntar documento (PDF o imagen, máx. 15 MB)<input type="file" id="p-file" accept="application/pdf,image/*"></label>
+      <button class="btn" id="p-guardar">Registrar dato o documento</button>` : restringido('Solo supervisión y análisis registran datos desde PDF.')}
+      <div style="margin-top:12px">${tabla(['Predio','Campo','Valor','Referencia','Fecha'], fuentesRecientes.slice(-25).reverse())}</div>
+      <h3>Fuentes registradas</h3>
+      ${tabla(['Fuente','Tipo','Institución','Corte','Actualización','Vigencia','Registrada por'], (S.fuentes||[]).map(f=>[esc(f.nombre), f.tipo==='predios'?'Catastro':'Amenaza', esc(f.institucion), f.fecha_corte||'—', f.fecha_actualizacion||'—', vigenciaHTML(f), esc(f.registrada_por)]))}
+      <h3>Documentos adjuntos</h3>
+      ${tabla(['Documento','Predio','Fecha','Abrir'], (S.documentos||[]).map(d=>[esc(d.nombre), esc(d.codigo), d.fecha, `<button class="btn mini sec" data-doc="${esc(d.id)}">Abrir</button>`]))}
+    </div>
+
+    <div class="grid2" style="grid-template-columns:1fr 1fr">
+      <div class="card">
+        <h3 style="margin-top:0">Paquetes de inspección</h3>
+        <p class="muted">Para compartir inspecciones entre equipos sin servidor. El paquete incluye las fotos. Se importa sin duplicar.</p>
+        ${pueExp ? `<button class="btn" id="x-paq">Exportar paquete</button>` : ''}
+        ${pueImp ? `<label class="btnfile" style="display:inline-block;padding:9px 14px">Importar paquete<input type="file" id="x-paq-imp" accept=".json" hidden></label>` : ''}
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Respaldo completo</h3>
+        <p class="muted">Todo lo que hay en este navegador (datos, inspecciones, fotos y auditoría). Hazlo al menos una vez por semana.</p>
+        ${pueExp ? `<button class="btn sec" id="x-resp">Exportar respaldo</button>` : ''}
+        ${pueImp ? `<label class="btnfile" style="display:inline-block;padding:9px 14px">Restaurar respaldo<input type="file" id="x-resp-imp" accept=".json" hidden></label>` : ''}
+        ${pueExp ? `<button class="btn sec" id="x-csv">Exportar predios con valores vigentes (CSV)</button>` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Zonas de amenaza cargadas (${S.amenazas.length})</h3>
+      <p class="muted">Cada zona marca como prioridad alta a los predios que la tocan. Renombra las zonas o elimina las que no correspondan; el cambio recalcula las prioridades al instante.</p>
+      ${S.amenazas.length ? tabla(['Nombre','Fuente','Fecha',''], S.amenazas.map((z,i)=>[
+        `<input type="text" data-zn="${i}" value="${esc(z.nombre)}" ${pueImp?'':'disabled'}>`,
+        esc(z.fuente), esc(z.fecha),
+        pueImp ? `<button class="btn mini no" data-zdel="${i}">Eliminar</button>` : ''])) : '<p class="muted">No hay zonas de amenaza cargadas.</p>'}
+      ${pueImp && S.amenazas.length ? '<button class="btn sec" id="z-borrar-todas">Eliminar todas las zonas</button>' : ''}
+    </div>
+
+`;
+
+  if($('d-inst-g')) $('d-inst-g').onclick = ()=>{ S.institucion = $('d-inst').value.trim() || S.institucion; registrar('cambió institución', '', S.institucion); guardar(); render(); show('Nombre guardado'); };
+  if($('d-predios')) $('d-predios').onchange = e=>{ if(e.target.files[0]) importarGeo(e.target.files[0],'predios'); e.target.value=''; };
+  if($('d-amen')) $('d-amen').onchange = e=>{ if(e.target.files[0]) importarGeo(e.target.files[0],'amenazas'); e.target.value=''; };
+  if($('p-guardar')) $('p-guardar').onclick = async ()=>{
+    const cod=$('p-cod').value.trim(), campo=$('p-campo').value, val=$('p-val').value.trim(), doc=$('p-doc').value.trim(), pag=$('p-pag').value;
+    if(!S.predios.some(p=>p.codigo===cod)){ show('Ese código no existe en los predios cargados'); return; }
+    const archivoDoc = $('p-file').files[0] || null;
+    if(!val && !archivoDoc){ show('Indica un valor o adjunta un documento'); return; }
+    if(val && !doc){ show('Indica el nombre del documento de origen'); return; }
+    if(archivoDoc && archivoDoc.size > 15*1024*1024){ show('El archivo supera 15 MB'); return; }
+    if(archivoDoc){ await adjuntarDocumento(cod, archivoDoc, doc || archivoDoc.name); }
+    if(!val){ guardar(); render(); show('Documento adjuntado al predio'); return; }
+    S.fuentesPDF[cod] = S.fuentesPDF[cod] || {};
+    S.fuentesPDF[cod][campo] = {valor:val, ref:`${doc}${pag?', p. '+pag:''}`, fecha:hoy()};
+    registrar('registró dato desde PDF', cod, `${ETIQ[campo]}: ${val} (${doc}${pag?' p. '+pag:''})`);
+    guardar(); render(); show('Dato registrado con su referencia');
+  };
+  if($('x-paq')) $('x-paq').onclick = ()=>exportarPaquete();
+  if($('x-paq-imp')) $('x-paq-imp').onchange = e=>{ if(e.target.files[0]) importarPaquete(e.target.files[0]); e.target.value=''; };
+  if($('x-resp')) $('x-resp').onclick = ()=>exportarRespaldo();
+  if($('x-resp-imp')) $('x-resp-imp').onchange = e=>{ if(e.target.files[0]) importarRespaldo(e.target.files[0]); e.target.value=''; };
+  if($('x-csv')) $('x-csv').onclick = ()=>{
+    const cab = ['codigo_catastral', ...CAMPOS, 'area_fuente','area_geometria','prioridad'];
+    const filas = S.predios.map(p=>{ const e=evaluar(p); return [p.codigo, ...CAMPOS.map(c=>valorVigente(p,c).valor ?? ''), (p.fuente||{}).area_fuente ?? '', e.areaCalc.toFixed(2), e.prioridad]; });
+    const csv = [cab,...filas].map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+    descargar('\ufeff'+csv, `iacat-predios-${hoy()}.csv`, 'text/csv;charset=utf-8');
+  };
+  document.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>abrirDocumento(b.dataset.doc));
+  document.querySelectorAll('[data-zn]').forEach(inp=>inp.onchange=()=>{
+    const z = S.amenazas[+inp.dataset.zn]; const nombre = inp.value.trim();
+    if(!z || !nombre){ show('El nombre no puede quedar vacío'); renderDatos(); return; }
+    registrar('renombró zona de amenaza', '', `${z.nombre} → ${nombre}`);
+    z.nombre = nombre; guardar(); show('Nombre actualizado');
+  });
+  document.querySelectorAll('[data-zdel]').forEach(b=>b.onclick=()=>{
+    const z = S.amenazas[+b.dataset.zdel]; if(!z) return;
+    if(!confirm(`¿Eliminar la zona «${z.nombre}»? Las prioridades se recalculan.`)) return;
+    S.amenazas.splice(+b.dataset.zdel, 1);
+    registrar('eliminó zona de amenaza', '', z.nombre); guardar(); render(); show('Zona eliminada');
+  });
+  if($('z-borrar-todas')) $('z-borrar-todas').onclick = ()=>{
+    if(!confirm(`¿Eliminar las ${S.amenazas.length} zonas de amenaza? Las prioridades se recalculan.`)) return;
+    registrar('eliminó todas las zonas de amenaza', '', `${S.amenazas.length} zonas`);
+    S.amenazas = []; guardar(); render(); show('Zonas eliminadas');
+  };
+  if($('d-quitar-sim')) $('d-quitar-sim').onclick = ()=>{
+    if(!confirm('Se eliminarán solo los datos de simulación. Los registros creados a mano se conservan. ¿Continuar?')) return;
+    const r = quitarSimulacion();
+    if(!haySimulacion() && S.fuenteDatos==='ejemplo') S.fuenteDatos = S.predios.length ? 'registros manuales' : 'vacio';
+    sel = S.predios[0] ? S.predios[0].codigo : null; VB = null;
+    registrar('quitó datos de simulación', '', `${r.predios} predio(s) de simulación; ${r.conservados} conservado(s) por tener registros reales`);
+    render(); show('Datos de simulación quitados');
+  };
+}
+
+// =====================================================================
+//  CONSULTA CIUDADANA (solo datos básicos, sin prioridades internas)
+// =====================================================================
+function renderConsulta(){
+  const col = $('colCentro');
+  col.innerHTML = `
+    <div class="cab-card"><div><h1>Consulta de predio</h1><div class="muted">Escribe el código catastral para ver los datos básicos. Para información técnica o trámites, acude a la institución.</div></div></div>
+    <div class="acc-row"><input type="text" id="c-cod" placeholder="Ej.: 3-31-4-0-0-0" style="max-width:340px"><button class="btn" id="c-buscar">Consultar</button></div>
+    <div id="c-res" style="margin-top:16px"></div>`;
+  const pintar = () => {
+    const cod = $('c-cod').value.trim();
+    const p = S.predios.find(x=>x.codigo===cod);
+    if(!cod){ $('c-res').innerHTML=''; return; }
+    if(!p){ $('c-res').innerHTML = '<div class="empty"><b>No encontramos ese código</b>Revisa que esté completo o consulta en la institución.</div>'; return; }
+    const d = valorVigente(p,'direccion'), u = valorVigente(p,'uso');
+    const pend = S.actualizaciones.some(a=>a.codigo===p.codigo && a.estado==='pendiente');
+    $('c-res').innerHTML = `
+      <div class="card">
+        <h2 style="margin-top:0">${esc(p.codigo)}</h2>
+        <div class="row"><span class="k">Dirección ${badge(d.origen)}</span><span>${v(d.valor)}</span></div>
+        <div class="row"><span class="k">Uso de edificación ${badge(u.origen)}</span><span>${v(u.valor)}</span></div>
+        ${pend ? '<div class="valid">Este predio tiene datos en revisión por la institución.</div>' : ''}
+        <p class="muted" style="margin-top:10px">Los datos pueden actualizarse con las visitas de verificación. Si encuentras un dato incorrecto, puedes presentar una solicitud ante la institución.</p>
+      </div>`;
+  };
+  $('c-buscar').onclick = pintar;
+  $('c-cod').onkeydown = e=>{ if(e.key==='Enter') pintar(); };
+}
+// Valores PÚBLICOS del proyecto. Nunca poner aquí claves service_role/secret ni contraseñas de PostgreSQL.
+const SUPABASE_CONFIG = {
+  url: 'https://hwliihccoxnasaodhxux.supabase.co',
+  anonKey: 'sb_publishable_KkcKH2CDzSQ6IWlnFFEPzw_2vYMydM2'
+};
+// Solo claves públicas. Nunca service_role, secret ni contraseñas de PostgreSQL.
+function bdCabeceras(){
+  return {'Content-Type':'application/json', 'apikey': String(SUPABASE_CONFIG.anonKey || '').trim()};
+}
+function bdBase(){ return String(SUPABASE_CONFIG.url || '').trim().replace(/\/+$/, ''); }
+function bdConfigurada(){ return !!(bdBase() && bdCabeceras().apikey); }
+
+const BD_LIMITE = 1000, BD_ZOOM_MIN = 15;
+const BD_CENTRO = [-2.196, -79.886]; // Guayaquil (lat, lon)
+
+// Funciones RPC de solo lectura (ya existentes en Supabase; no se modifican aquí)
+const BD_CAPAS = {
+  predios:  {fn:'predios_en_extension',  color:'#1d6fb8', nombre:'Predios'},
+  manzanas: {fn:'manzanas_en_extension', color:'#14a095', nombre:'Manzanas'}
+};
+
+// Fondos de mapa opcionales. Por defecto NINGUNO: así no se carga ningún servicio externo.
+const BD_FONDOS = {
+  ninguno: null,
+  carto: {url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          opts:{attribution:'© OpenStreetMap contributors © CARTO', subdomains:'abcd', maxZoom:20}},
+  osm:   {url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          opts:{attribution:'© OpenStreetMap contributors', maxZoom:19}}
+};
+
+const BD_VISIBLE = {predios:true, manzanas:true};
+let BD_MAPA = null, BD_GRUPOS = {}, BD_PEDIDO = 0;
+let BD_FONDO_CAPA = null, BD_FONDO_ACTUAL = 'ninguno';
+let BD_VISTA = {predios:[], manzanas:[]}; // geometrías de la última respuesta, para saber qué predio se pulsó
+let BD_SEL = null;     // predio seleccionado: {id, codigo, geometry}
+let BD_RESALTE = null; // capa naranja del predio seleccionado (no interactiva)
+
+const BD_SIM_CLAVE = 'iacat-simulacion-inspecciones'; // SOLO datos ficticios, solo en este navegador
+function bdSimLeer(){
+  try{ return JSON.parse(localStorage.getItem(BD_SIM_CLAVE) || '[]'); }catch(e){ return []; }
+}
+function bdSimGuardar(lista){
+  try{ localStorage.setItem(BD_SIM_CLAVE, JSON.stringify(lista)); return true; }catch(e){ return false; }
+}
+
+// Llamada RPC con la extensión visible (longitud/latitud, EPSG:4326)
+async function bdLlamar(fn, bounds){
+  const r = await fetch(`${bdBase()}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: bdCabeceras(),
+    body: JSON.stringify({
+      xmin: bounds.getWest(), ymin: bounds.getSouth(),
+      xmax: bounds.getEast(), ymax: bounds.getNorth(),
+      limite: BD_LIMITE
+    })
+  });
+  if(!r.ok){
+    let cuerpo = '';
+    try{ cuerpo = await r.text(); }catch(e){}
+    throw new Error(`HTTP ${r.status} · ${cuerpo.slice(0,160) || 'sin detalle'}`);
+  }
+  const datos = await r.json();
+  if(!datos || datos.type !== 'FeatureCollection' || !Array.isArray(datos.features)){
+    throw new Error('respuesta no válida de ' + fn);
+  }
+  return datos;
+}
+
+// ---- Geometría: ¿el punto pulsado cae dentro de un predio? ----
+function bdEnAnillo(lng, lat, anillo){
+  let dentro = false;
+  for(let i = 0, j = anillo.length - 1; i < anillo.length; j = i++){
+    const xi = anillo[i][0], yi = anillo[i][1], xj = anillo[j][0], yj = anillo[j][1];
+    if((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi) dentro = !dentro;
+  }
+  return dentro;
+}
+function bdContiene(geom, lng, lat){
+  if(!geom) return false;
+  const poligonos = geom.type === 'Polygon' ? [geom.coordinates]
+                  : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+  return poligonos.some(anillos => {
+    // Regla par/impar: los agujeros (anillos interiores) se restan automáticamente
+    let n = 0;
+    anillos.forEach(a => { if(bdEnAnillo(lng, lat, a)) n++; });
+    return n % 2 === 1;
+  });
+}
+function bdBuscarPredio(lng, lat){
+  return BD_VISTA.predios.find(f => bdContiene(f.geometry, lng, lat)) || null;
+}
+
+// ---- Selección y resaltado ----
+function bdSeleccionarFeature(f){
+  const pr = f.properties || {};
+  BD_SEL = {id: pr.id, codigo: pr.codigo || null, geometry: f.geometry};
+  bdDibujarResalte();
+  bdPintarFicha();
+}
+function bdLimpiarSeleccion(){
+  BD_SEL = null;
+  bdDibujarResalte();
+  bdPintarFicha();
+}
+function bdDibujarResalte(){
+  if(!BD_MAPA) return;
+  if(BD_RESALTE){ BD_MAPA.removeLayer(BD_RESALTE); BD_RESALTE = null; }
+  if(!BD_SEL || !BD_SEL.geometry) return;
+  BD_RESALTE = L.geoJSON({type:'Feature', properties:{}, geometry: BD_SEL.geometry}, {
+    interactive: false,
+    style: {color:'#d9961a', weight:3, fillColor:'#f5a623', fillOpacity:.5}
+  }).addTo(BD_MAPA);
+  BD_RESALTE.bringToFront();
+}
+
+function bdPintarFicha(){
+  const cont = $('bd-sel');
+  if(!cont) return;
+  if(!BD_SEL){ cont.innerHTML = '<span class="muted">Toca un predio para ver su ficha.</span>'; return; }
+  const registros = bdSimLeer().filter(x => x.predio_id === BD_SEL.id);
+  cont.innerHTML = `
+    <div style="font-weight:700;color:var(--navy);margin-bottom:4px">Predio seleccionado</div>
+    <div class="lab" style="margin:6px 0 2px">Datos catastrales (Supabase, solo lectura)</div>
+    <div class="row" style="padding:4px 0"><span class="k">ID interno</span><span>${esc(String(BD_SEL.id))}</span></div>
+    <div class="row" style="padding:4px 0"><span class="k">Código catastral</span><span>${BD_SEL.codigo ? esc(BD_SEL.codigo) : 'sin código'}</span></div>
+    <div class="muted" style="margin:4px 0">El código no es único: las referencias usan el ID interno.
+      Uso, dirección, manzana y lote requieren una consulta de detalle pendiente.</div>
+    <div class="lab" style="margin:8px 0 2px">Registros de inspección</div>
+    <div class="muted">${registros.length
+      ? `${registros.length} registro(s) guardado(s) solo en este navegador.`
+      : 'Sin registros de inspección disponibles para este predio.'}</div>
+    <button class="btn mini sec" id="bd-nueva-sim" style="margin-top:6px">Nueva inspección</button>
+    <div id="bd-form-sim"></div>`;
+  $('bd-nueva-sim').onclick = bdAbrirFormularioSim;
+}
+
+function bdAbrirFormularioSim(){
+  $('bd-form-sim').innerHTML = `
+    <div class="muted" style="margin:8px 0 4px">Este registro se guarda solo en este navegador y todavía no se envía a Supabase.</div>
+    <label class="campo" style="margin:4px 0">Técnico<input type="text" id="bd-sim-tec" placeholder="Nombre del técnico"></label>
+    <label class="campo" style="margin:4px 0">Estado de conservación
+      <select id="bd-sim-est"><option>Bueno</option><option>Regular</option><option>Malo</option></select></label>
+    <label class="campo" style="margin:4px 0">Observación<textarea id="bd-sim-obs" placeholder="Describe lo observado"></textarea></label>
+    <button class="btn mini ok" id="bd-sim-guardar">Guardar simulación</button>
+    <button class="btn mini sec" id="bd-sim-cancelar">Cancelar</button>`;
+  $('bd-sim-guardar').onclick = bdGuardarSim;
+  $('bd-sim-cancelar').onclick = ()=>{ $('bd-form-sim').innerHTML = ''; };
+}
+
+function bdGuardarSim(){
+  if(!BD_SEL) return;
+  const lista = bdSimLeer();
+  lista.push({
+    predio_id: BD_SEL.id,
+    codigo: BD_SEL.codigo,
+    fecha: new Date().toISOString().slice(0,10),
+    tecnico: $('bd-sim-tec').value.trim(),
+    estado: $('bd-sim-est').value,
+    observacion: $('bd-sim-obs').value.trim()
+  });
+  if(!lista[lista.length-1].tecnico){ lista.pop(); if($('bd-est')) $('bd-est').textContent = 'Indica el nombre del técnico.'; return; }
+  const ok = bdSimGuardar(lista);
+  $('bd-form-sim').innerHTML = '';
+  bdPintarFicha();
+  if($('bd-est')) $('bd-est').textContent = ok
+    ? 'Registro guardado en este navegador (no en Supabase).'
+    : 'No se pudo guardar: el navegador bloquea el almacenamiento local.';
+}
+
+// ---- Fondo de mapa opcional ----
+function bdPonerFondo(clave){
+  BD_FONDO_ACTUAL = clave;
+  if(!BD_MAPA) return;
+  if(BD_FONDO_CAPA){ BD_MAPA.removeLayer(BD_FONDO_CAPA); BD_FONDO_CAPA = null; }
+  const f = BD_FONDOS[clave];
+  if(!f) return;
+  BD_FONDO_CAPA = L.tileLayer(f.url, Object.assign({
+    errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+  }, f.opts)).addTo(BD_MAPA);
+  BD_FONDO_CAPA.on('tileerror', ev=>console.warn('Mosaico con error (' + clave + '):', ev && ev.tile ? ev.tile.src : ''));
+}
+
+// ---- Mapa ----
+function renderMapaBD(){
+  const col = $('colCentro');
+  if(BD_MAPA){ try{ BD_MAPA.remove(); }catch(e){} BD_MAPA = null; }
+  BD_GRUPOS = {}; BD_FONDO_CAPA = null; BD_RESALTE = null;
+  col.innerHTML = `<div id="bdmap" style="height:100%;width:100%;background:#eef3f6"></div>
+    <div class="mapa-leg" style="max-width:300px">
+      <div id="bd-est">Cargando…</div>
+      <div class="leyenda" id="bd-capas">${Object.entries(BD_CAPAS).map(([k,c])=>
+        `<label><input type="checkbox" data-bdcapa="${k}" ${BD_VISIBLE[k]?'checked':''}> ${c.nombre}</label>`).join(' ')}</div>
+      <label class="campo" style="margin:6px 0 2px">Fondo de mapa
+        <select id="bd-fondo">
+          <option value="ninguno" ${BD_FONDO_ACTUAL==='ninguno'?'selected':''}>Sin fondo</option>
+          <option value="carto" ${BD_FONDO_ACTUAL==='carto'?'selected':''}>CARTO</option>
+          <option value="osm" ${BD_FONDO_ACTUAL==='osm'?'selected':''}>OpenStreetMap</option>
+        </select></label>
+      <div id="bd-sel" class="muted" style="margin-top:6px"></div>
+      <button class="btn mini sec" id="bd-probar" style="margin-top:6px">Probar conexión</button>
+    </div>`;
+  if(!bdConfigurada()){
+    $('bd-est').textContent = 'Falta configurar la conexión a Supabase (URL y clave publicable).';
+    return;
+  }
+  BD_MAPA = L.map('bdmap').setView(BD_CENTRO, BD_ZOOM_MIN);
+  bdPonerFondo(BD_FONDO_ACTUAL);
+  Object.keys(BD_CAPAS).forEach(k=>{
+    BD_GRUPOS[k] = L.layerGroup();
+    if(BD_VISIBLE[k]) BD_GRUPOS[k].addTo(BD_MAPA);
+  });
+  bdDibujarResalte();
+
+  // Un solo mecanismo de selección: el clic del mapa, resuelto por geometría
+  BD_MAPA.on('click', e=>{
+    if(!BD_VISIBLE.predios){ return; }
+    const f = bdBuscarPredio(e.latlng.lng, e.latlng.lat);
+    if(f){
+      bdSeleccionarFeature(f);
+      const pr = f.properties || {};
+      L.popup().setLatLng(e.latlng).setContent(
+        `<b>Predio seleccionado</b><br>ID: ${esc(String(pr.id))}<br>Código: ${pr.codigo ? esc(pr.codigo) : 'sin código'}`
+      ).openOn(BD_MAPA);
+    } else {
+      bdLimpiarSeleccion();
+    }
+  });
+
+  col.querySelectorAll('[data-bdcapa]').forEach(cb=>cb.onchange=()=>{
+    const k = cb.dataset.bdcapa;
+    BD_VISIBLE[k] = cb.checked;
+    if(!BD_MAPA) return;
+    if(cb.checked) BD_GRUPOS[k].addTo(BD_MAPA); else BD_MAPA.removeLayer(BD_GRUPOS[k]);
+    if(!cb.checked) BD_VISTA[k] = [];
+    bdActualizar();
+  });
+  $('bd-fondo').onchange = e=>bdPonerFondo(e.target.value);
+  $('bd-probar').onclick = bdProbar;
+  BD_MAPA.on('moveend', bdActualizar);
+  bdPintarFicha();
+  setTimeout(()=>{ if(BD_MAPA) BD_MAPA.invalidateSize(); }, 0);
+  bdActualizar();
+}
+
+// Prueba real de las dos funciones RPC con una zona pequeña
+const BD_ZONA_PRUEBA = {xmin:-79.8900, ymin:-2.2000, xmax:-79.8850, ymax:-2.1950, limite:5};
+async function bdProbar(){
+  const est = $('bd-est');
+  if(!est) return;
+  est.textContent = 'Probando funciones…';
+  const lineas = [];
+  for(const k of Object.keys(BD_CAPAS)){
+    try{
+      const r = await fetch(`${bdBase()}/rest/v1/rpc/${BD_CAPAS[k].fn}`, {
+        method:'POST', headers: bdCabeceras(), body: JSON.stringify(BD_ZONA_PRUEBA)
+      });
+      const texto = await r.text();
+      if(!r.ok){ lineas.push(`${BD_CAPAS[k].nombre}: HTTP ${r.status} · ${texto.slice(0,200)}`); continue; }
+      const datos = JSON.parse(texto);
+      const n = Array.isArray(datos.features) ? datos.features.length : 'formato no esperado';
+      lineas.push(`${BD_CAPAS[k].nombre}: HTTP ${r.status} · ${n} elemento(s) de prueba`);
+    }catch(e){ lineas.push(`${BD_CAPAS[k].nombre}: sin respuesta · ${e.message}`); }
+  }
+  est.textContent = lineas.join(' | ');
+}
+
+async function bdActualizar(){
+  if(!BD_MAPA || !$('bd-est')) return;
+  const est = $('bd-est');
+  if(BD_MAPA.getZoom() < BD_ZOOM_MIN){
+    Object.values(BD_GRUPOS).forEach(g=>g.clearLayers());
+    BD_VISTA = {predios:[], manzanas:[]};
+    est.textContent = `Acerca el mapa (zoom ${BD_ZOOM_MIN} o más) para cargar elementos.`;
+    return;
+  }
+  const pedido = ++BD_PEDIDO;
+  const bounds = BD_MAPA.getBounds();
+  const todas = Object.keys(BD_CAPAS);
+  const activas = todas.filter(k=>BD_VISIBLE[k]);
+  todas.filter(k=>!BD_VISIBLE[k]).forEach(k=>BD_GRUPOS[k].clearLayers());
+  est.textContent = 'Cargando…';
+  try{
+    const resultados = await Promise.all(activas.map(k=>bdLlamar(BD_CAPAS[k].fn, bounds)));
+    if(pedido !== BD_PEDIDO || !BD_MAPA) return; // respuesta antigua: se descarta
+    const conteo = [], avisos = [];
+    activas.forEach((k, i)=>{
+      const datos = resultados[i];
+      BD_VISTA[k] = datos.features;
+      BD_GRUPOS[k].clearLayers();
+      // interactive:false: los polígonos no capturan el ratón; el clic lo recibe el mapa
+      L.geoJSON(datos, {
+        interactive: false,
+        filter: f => !!f.geometry,
+        style: {color:BD_CAPAS[k].color, weight:1, fillOpacity:.15}
+      }).addTo(BD_GRUPOS[k]);
+      conteo.push(`${datos.features.length} ${BD_CAPAS[k].nombre.toLowerCase()}`);
+      if(datos.features.length >= BD_LIMITE) avisos.push(BD_CAPAS[k].nombre);
+    });
+    todas.filter(k=>!BD_VISIBLE[k]).forEach(k=>{ BD_VISTA[k] = []; });
+    if(BD_RESALTE) BD_RESALTE.bringToFront();
+    let texto = activas.length ? `Mostrando ${conteo.join(' · ')} en esta vista.` : 'No hay capas activas.';
+    if(avisos.length) texto += ` Hay más de ${BD_LIMITE} en: ${avisos.join(', ')}. Acerca el mapa para verlos todos.`;
+    est.textContent = texto;
+  }catch(e){
+    console.error('Mapa en vivo: error al cargar', e);
+    if(pedido === BD_PEDIDO && $('bd-est')) $('bd-est').textContent = 'No se pudo cargar: ' + e.message;
+  }
+}
+
+// =====================================================================
+//  EVENTOS GLOBALES Y ARRANQUE
+// =====================================================================
+$('salir').onclick = ()=>cerrarSesion();
+$('campana').onclick = ()=>{ vista = 'notificaciones'; render(); };
+
+cargarEstado();
+if(USUARIO) generarAvisos();
+render();
+</script>
+</body>
+</html>
